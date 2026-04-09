@@ -1,0 +1,2830 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TILT — Bettor Behavior Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --bg:#0a0f13;--bg2:#0d1219;--panel:#111820;--card:#141c27;--card-hover:#1a2535;
+  --border:#1c2a3a;--border2:#243344;--text:#e8eef4;--sub:#8a9db3;--dim:#3d5068;
+  --green:#00e676;--green2:#00c853;--green-bg:rgba(0,230,118,.06);
+  --amber:#ffab00;--amber-bg:rgba(255,171,0,.06);
+  --red:#ff5252;--red-bg:rgba(255,82,82,.06);
+  --blue:#40c4ff;--blue-bg:rgba(64,196,255,.06);
+  --teal:#64ffda;--purple:#ce93d8;--orange:#ff8a65;
+  --accent:#00e676;--radius:6px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.2);--shadow-md:0 4px 12px rgba(0,0,0,.25);--shadow-lg:0 8px 24px rgba(0,0,0,.35)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+
+/* NAV */
+.nav{display:flex;align-items:center;padding:0 28px;height:60px;background:rgba(17,24,32,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;z-index:50;box-shadow:0 1px 12px rgba(0,0,0,.4)}
+.nav-logo{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;letter-spacing:-1px;margin-right:32px;display:flex;align-items:baseline;gap:6px}
+.nav-logo em{font-style:normal;color:var(--orange);font-weight:800;font-size:24px}
+.nav-logo span{color:var(--sub);font-weight:500;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-left:4px}
+.nav-tabs{display:flex;gap:0;height:100%}
+.nav-tab{display:flex;align-items:center;gap:6px;padding:0 16px;height:100%;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;user-select:none;letter-spacing:.3px}
+.nav-tab:hover{color:var(--sub)}
+.nav-tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn{padding:7px 14px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:.4px;border:none;border-radius:6px;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;text-transform:uppercase}
+.btn-primary{background:var(--orange);color:#0a0f13}
+.btn-primary:hover{background:#ff7043;transform:translateY(-1px)}
+.btn-ghost{background:var(--card);color:var(--sub);border:1px solid var(--border2)}
+.btn-ghost:hover{background:var(--card-hover);color:var(--text)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(255,82,82,.3)}
+.btn-danger:hover{background:var(--red-bg)}
+
+/* CONTAINER */
+.wrap{max-width:1600px;margin:0 auto;padding:24px 28px 60px}
+
+/* EMPTY STATE */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:65vh;text-align:center;padding:40px 20px}
+.empty-icon{width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,rgba(255,138,101,.15),rgba(255,82,82,.05));display:flex;align-items:center;justify-content:center;margin-bottom:24px;border:1px solid rgba(255,138,101,.2)}
+.empty-icon svg{width:42px;height:42px;color:var(--orange)}
+.empty h1{font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:12px}
+.empty p{color:var(--sub);font-size:15px;max-width:560px;margin-bottom:32px;line-height:1.6}
+.empty-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.empty-features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;max-width:900px;margin-top:48px;width:100%}
+.feat{padding:18px;background:var(--card);border:1px solid var(--border);border-radius:10px;text-align:left}
+.feat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:18px}
+.feat-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;margin-bottom:4px;color:var(--text)}
+.feat-desc{font-size:12px;color:var(--sub);line-height:1.5}
+
+/* DASHBOARD GRID */
+.dash{display:none}
+.dash.active{display:block}
+
+.section-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin:24px 0 12px;display:flex;align-items:center;gap:10px}
+.section-title::before{content:'';width:3px;height:14px;background:var(--orange);border-radius:2px}
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden;transition:all .2s}
+.kpi:hover{border-color:var(--border2);transform:translateY(-1px)}
+.kpi-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:8px}
+.kpi-value{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.kpi-sub{font-size:11px;color:var(--sub);margin-top:6px;font-family:'JetBrains Mono',monospace}
+.kpi.green .kpi-value{color:var(--green)}
+.kpi.red .kpi-value{color:var(--red)}
+.kpi.blue .kpi-value{color:var(--blue)}
+.kpi.amber .kpi-value{color:var(--amber)}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;color:var(--text);display:flex;align-items:center;gap:8px}
+.card-title .badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;letter-spacing:.5px;background:var(--border);color:var(--sub)}
+.card-subtitle{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+
+/* TWO-COL */
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.row-discipline{display:grid;grid-template-columns:380px 1fr;gap:16px;margin-bottom:16px}
+
+/* DISCIPLINE GAUGE */
+.disc-card{display:flex;flex-direction:column;align-items:center;text-align:center}
+.gauge{position:relative;width:240px;height:240px;margin:8px 0 16px}
+.gauge-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.gauge-value{font-family:'Space Grotesk',sans-serif;font-size:56px;font-weight:800;letter-spacing:-2px;line-height:1}
+.gauge-max{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:1px;margin-top:2px}
+.gauge-tier{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;margin-top:6px;text-transform:uppercase}
+.disc-breakdown{width:100%;display:grid;grid-template-columns:1fr;gap:6px}
+.disc-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.disc-row-label{color:var(--sub);min-width:120px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+.disc-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.disc-bar-fill{height:100%;border-radius:3px;transition:width .6s}
+.disc-row-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);min-width:32px;text-align:right}
+
+/* TILT TIMELINE */
+.tilt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(14px,1fr));gap:3px;margin:8px 0}
+.tilt-cell{aspect-ratio:1;border-radius:2px;cursor:pointer;transition:all .15s;border:1px solid rgba(255,255,255,.02)}
+.tilt-cell:hover{transform:scale(1.4);z-index:5;position:relative;border-color:var(--text)}
+.tilt-legend{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.tilt-legend-cells{display:flex;gap:2px}
+.tilt-legend-cell{width:11px;height:11px;border-radius:2px}
+
+/* INSIGHTS */
+.insight{display:flex;gap:14px;padding:14px 16px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid;border-radius:8px;margin-bottom:10px;transition:all .15s}
+.insight:hover{background:var(--card-hover);transform:translateX(2px)}
+.insight.critical{border-left-color:var(--red)}
+.insight.warn{border-left-color:var(--amber)}
+.insight.info{border-left-color:var(--blue)}
+.insight.good{border-left-color:var(--green)}
+.insight-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.insight.critical .insight-icon{background:var(--red-bg);color:var(--red)}
+.insight.warn .insight-icon{background:var(--amber-bg);color:var(--amber)}
+.insight.info .insight-icon{background:var(--blue-bg);color:var(--blue)}
+.insight.good .insight-icon{background:var(--green-bg);color:var(--green)}
+.insight-body{flex:1}
+.insight-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;margin-bottom:3px}
+.insight-desc{font-size:12px;color:var(--sub);line-height:1.5}
+.insight-impact{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:6px;letter-spacing:.5px}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);font-weight:600}
+td{padding:10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.t-num{font-family:'JetBrains Mono',monospace;text-align:right}
+.t-pos{color:var(--green)}
+.t-neg{color:var(--red)}
+.t-mut{color:var(--sub)}
+
+/* CHART CONTAINER */
+.chart-box{position:relative;height:240px;width:100%}
+.chart-box-tall{position:relative;height:300px;width:100%}
+
+/* PILL */
+.pill{display:inline-block;padding:2px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.5px;border-radius:10px;text-transform:uppercase;font-weight:600}
+.pill-w{background:var(--green-bg);color:var(--green)}
+.pill-l{background:var(--red-bg);color:var(--red)}
+.pill-p{background:var(--blue-bg);color:var(--blue)}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center}
+.modal-bg.active{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:28px;max-width:560px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal h2{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;margin-bottom:6px}
+.modal p.sub{color:var(--sub);font-size:13px;margin-bottom:20px}
+.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px}
+.upload-zone:hover{border-color:var(--orange);background:rgba(255,138,101,.03)}
+.upload-zone.drag{border-color:var(--orange);background:rgba(255,138,101,.06)}
+.upload-zone svg{width:36px;height:36px;color:var(--dim);margin-bottom:10px}
+.upload-zone p{color:var(--sub);font-size:13px;margin:0}
+.upload-zone strong{color:var(--text)}
+.modal-close{margin-left:auto;background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:20px;padding:0;width:32px;height:32px}
+.modal-close:hover{color:var(--text)}
+.modal-header{display:flex;align-items:start;margin-bottom:8px}
+.modal-header h2{flex:1}
+
+.csv-info{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sub);line-height:1.7;margin-bottom:14px}
+.csv-info b{color:var(--text)}
+
+/* TIME HEATMAP */
+.heatmap{display:grid;grid-template-columns:40px repeat(24,1fr);gap:2px;margin-top:8px}
+.hm-cell{aspect-ratio:1;border-radius:2px;cursor:pointer;position:relative}
+.hm-cell:hover{outline:1px solid var(--text);z-index:2}
+.hm-row-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-align:right;padding-right:4px;align-self:center}
+.hm-col-label{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);text-align:center}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border2);border-left:3px solid var(--green);border-radius:8px;padding:14px 18px;font-size:13px;color:var(--text);box-shadow:var(--shadow-lg);z-index:200;animation:slideIn .3s ease;max-width:340px}
+.toast.error{border-left-color:var(--red)}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* RESPONSIVE */
+@media (max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}.row,.row-3,.row-discipline{grid-template-columns:1fr}}
+@media (max-width:640px){.kpi-row{grid-template-columns:repeat(2,1fr)}.wrap{padding:16px}}
+
+/* TOOLTIPS */
+[data-tip]{position:relative}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:120%;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;white-space:nowrap;font-family:'JetBrains Mono',monospace;z-index:100;pointer-events:none;border:1px solid var(--border2)}
+
+/* TAB VIEWS */
+.tab-view{display:none}
+.tab-view.active{display:block}
+
+/* SEARCH / FILTERS */
+.filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filter-input{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;width:200px;outline:none}
+.filter-input:focus{border-color:var(--orange)}
+.filter-input::placeholder{color:var(--dim)}
+.filter-select{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;outline:none}
+.filter-select:focus{border-color:var(--orange)}
+.filter-count{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)}
+
+/* PAGINATION */
+.pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px}
+.page-btn{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 10px;color:var(--sub);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer}
+.page-btn:hover{border-color:var(--orange);color:var(--text)}
+.page-btn.active{background:var(--orange);color:#0a0f13;border-color:var(--orange)}
+.page-info{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)}
+
+/* HEATMAP FOR PATTERNS */
+.pattern-heatmap{display:grid;grid-template-columns:60px repeat(24,1fr);gap:2px;font-family:'JetBrains Mono',monospace}
+.ph-label{font-size:9px;color:var(--dim);display:flex;align-items:center;justify-content:flex-end;padding-right:6px}
+.ph-col-label{font-size:8px;color:var(--dim);text-align:center;padding:2px 0}
+.ph-cell{border-radius:2px;position:relative;aspect-ratio:1.4;display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(255,255,255,.5);cursor:default}
+.ph-cell:hover{outline:1px solid rgba(255,255,255,.4);z-index:2}
+
+/* MONTHLY CHART */
+.monthly-bars{display:flex;gap:4px;align-items:flex-end;height:160px;padding:0 4px}
+.monthly-bar{flex:1;border-radius:3px 3px 0 0;position:relative;min-width:0;transition:all .15s;cursor:default}
+.monthly-bar:hover{opacity:.8}
+.monthly-bar-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);white-space:nowrap}
+
+/* BOOK PERF BARS */
+.book-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.book-name{min-width:100px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text)}
+.book-bar-wrap{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;position:relative}
+.book-bar-inner{height:100%;border-radius:4px;transition:width .4s}
+.book-stats{min-width:140px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--sub)}
+
+/* ============================================================
+   WRAPPED — STORY MODE (Spotify-Wrapped style)
+   ============================================================ */
+.btn-wrapped{
+  background:linear-gradient(135deg,#ff6e40,#ff5252,#e040fb);
+  background-size:200% 200%;
+  color:#fff;
+  font-weight:800;
+  letter-spacing:.6px;
+  animation:gradShift 4s ease infinite;
+  box-shadow:0 0 20px rgba(255,82,82,.3);
+  border:none;
+}
+.btn-wrapped:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 30px rgba(255,82,82,.5)}
+@keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+.wrapped{
+  display:none;
+  position:fixed;inset:0;
+  z-index:300;
+  background:#000;
+  overflow:hidden;
+}
+.wrapped.active{display:block;animation:wrappedIn .4s ease}
+@keyframes wrappedIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+/* Story progress bars at top */
+.wp-progress{
+  position:absolute;top:14px;left:14px;right:14px;
+  display:flex;gap:4px;z-index:10;
+}
+.wp-bar{
+  flex:1;height:3px;background:rgba(255,255,255,.25);
+  border-radius:2px;overflow:hidden;
+}
+.wp-bar-fill{
+  height:100%;width:0%;background:#fff;border-radius:2px;
+}
+.wp-bar.done .wp-bar-fill{width:100%}
+.wp-bar.active .wp-bar-fill{
+  animation:wpProgress var(--dur,6s) linear forwards;
+}
+@keyframes wpProgress{to{width:100%}}
+
+.wp-close{
+  position:absolute;top:30px;right:24px;z-index:11;
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.1);
+  color:#fff;font-size:22px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border:none;
+  backdrop-filter:blur(10px);
+  transition:all .2s;
+}
+.wp-close:hover{background:rgba(255,255,255,.2);transform:rotate(90deg)}
+
+.wp-nav-zone{
+  position:absolute;top:60px;bottom:0;width:30%;
+  cursor:pointer;z-index:8;
+}
+.wp-nav-prev{left:0}
+.wp-nav-next{right:0}
+
+.wp-stage{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:80px 40px 60px;
+  text-align:center;
+  font-family:'Space Grotesk',sans-serif;
+  color:#fff;
+  overflow:hidden;
+}
+
+/* Card backgrounds — each card has its own vibe */
+.wp-card{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:80px 40px 80px;
+  text-align:center;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .3s;
+}
+.wp-card.active{opacity:1;pointer-events:all;animation:wpCardIn .5s ease}
+@keyframes wpCardIn{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.wp-bg-1{background:radial-gradient(ellipse at top,#1a1a2e,#000)}
+.wp-bg-2{background:linear-gradient(135deg,#ff6e40 0%,#ff5252 100%)}
+.wp-bg-3{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)}
+.wp-bg-4{background:linear-gradient(135deg,#11998e,#38ef7d)}
+.wp-bg-5{background:linear-gradient(135deg,#ee0979,#ff6a00)}
+.wp-bg-6{background:linear-gradient(135deg,#1d1f2a,#000)}
+.wp-bg-7{background:linear-gradient(135deg,#360033,#0b8793)}
+.wp-bg-8{background:linear-gradient(135deg,#fc4a1a,#f7b733)}
+.wp-bg-9{background:linear-gradient(135deg,#000428,#004e92)}
+.wp-bg-10{background:linear-gradient(135deg,#dd1818,#333)}
+.wp-bg-11{background:linear-gradient(135deg,#8e2de2,#4a00e0)}
+.wp-bg-12{background:linear-gradient(135deg,#ff6e40,#ff5252,#e040fb);background-size:200% 200%;animation:gradShift 6s ease infinite}
+
+.wp-eyebrow{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;letter-spacing:3px;
+  text-transform:uppercase;
+  opacity:.7;margin-bottom:24px;
+}
+.wp-headline{
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:900;
+  font-size:clamp(40px,8vw,96px);
+  line-height:.95;
+  letter-spacing:-2px;
+  margin-bottom:24px;
+  max-width:900px;
+}
+.wp-mega{
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:900;
+  font-size:clamp(80px,18vw,240px);
+  line-height:.85;
+  letter-spacing:-6px;
+  margin:20px 0;
+  background:linear-gradient(180deg,#fff,rgba(255,255,255,.7));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.wp-sub{
+  font-family:'Inter',sans-serif;
+  font-size:clamp(16px,2vw,22px);
+  font-weight:500;
+  opacity:.85;
+  max-width:600px;
+  line-height:1.5;
+  margin-top:12px;
+}
+.wp-tag{
+  display:inline-block;
+  padding:8px 16px;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.3);
+  border-radius:100px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  margin-top:20px;
+  backdrop-filter:blur(10px);
+}
+
+/* Personality card */
+.wp-persona{
+  display:flex;flex-direction:column;align-items:center;
+  animation:floaty 3s ease-in-out infinite;
+}
+@keyframes floaty{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-10px)}
+}
+.wp-persona-emoji{font-size:140px;line-height:1;margin-bottom:20px;filter:drop-shadow(0 10px 30px rgba(0,0,0,.4))}
+.wp-persona-title{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:clamp(48px,7vw,80px);
+  font-weight:900;
+  letter-spacing:-1px;
+  line-height:1;
+}
+
+/* Bet detail card */
+.wp-bet-detail{
+  background:rgba(0,0,0,.3);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:16px;
+  padding:24px 32px;
+  margin-top:24px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:14px;
+  max-width:500px;
+}
+.wp-bet-detail .wpd-row{display:flex;justify-content:space-between;padding:6px 0;gap:20px}
+.wp-bet-detail .wpd-row span:first-child{opacity:.7}
+
+/* Stat list */
+.wp-stat-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:18px;
+  max-width:600px;
+  margin-top:30px;
+}
+.wp-stat-cell{
+  background:rgba(0,0,0,.25);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:12px;
+  padding:18px;
+  text-align:left;
+}
+.wp-stat-cell .wsc-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;letter-spacing:1.5px;
+  opacity:.6;text-transform:uppercase;
+}
+.wp-stat-cell .wsc-value{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:32px;font-weight:800;
+  line-height:1;margin-top:6px;
+}
+.wp-stat-cell .wsc-sub{
+  font-size:11px;opacity:.7;margin-top:4px;
+}
+
+/* Final share card */
+.wp-share{
+  background:rgba(0,0,0,.4);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:24px;
+  padding:36px;
+  max-width:420px;
+  width:90%;
+}
+.wp-share h3{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:13px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  opacity:.7;
+  margin-bottom:18px;
+}
+.wp-share-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  text-align:left;
+  margin-bottom:24px;
+}
+.wp-share-item .wpsi-label{font-size:10px;opacity:.6;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase}
+.wp-share-item .wpsi-value{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:24px;line-height:1;margin-top:4px}
+
+.wp-share-btns{display:flex;gap:10px;margin-top:24px;justify-content:center}
+.wp-share-btn{
+  padding:12px 22px;
+  background:#fff;color:#000;
+  border:none;border-radius:100px;
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:700;font-size:13px;
+  letter-spacing:.5px;text-transform:uppercase;
+  cursor:pointer;
+  transition:all .2s;
+}
+.wp-share-btn.outline{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.5)}
+.wp-share-btn:hover{transform:scale(1.05)}
+
+/* Period selector card */
+.wp-period-buttons{
+  display:flex;gap:10px;margin-top:30px;flex-wrap:wrap;justify-content:center;
+}
+.wp-period-btn{
+  padding:14px 26px;
+  background:rgba(255,255,255,.12);
+  border:1.5px solid rgba(255,255,255,.25);
+  color:#fff;
+  border-radius:100px;
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:700;
+  font-size:14px;
+  letter-spacing:.5px;
+  cursor:pointer;
+  text-transform:uppercase;
+  transition:all .2s;
+  backdrop-filter:blur(10px);
+}
+.wp-period-btn:hover{background:rgba(255,255,255,.25);transform:scale(1.05)}
+
+/* Confetti */
+.confetti{
+  position:absolute;width:8px;height:14px;
+  top:-20px;
+  animation:confettiFall linear infinite;
+  pointer-events:none;
+}
+@keyframes confettiFall{
+  to{transform:translateY(110vh) rotate(720deg)}
+}
+
+/* Floating background icons for vibe */
+.float-bg{
+  position:absolute;font-size:80px;opacity:.05;
+  animation:floatBg 20s linear infinite;
+  pointer-events:none;
+}
+@keyframes floatBg{
+  from{transform:translateY(100vh) rotate(0)}
+  to{transform:translateY(-200px) rotate(360deg)}
+}
+
+/* COUNTER */
+.counter{display:inline-block;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">TILT<em>.</em><span>BETTOR INTELLIGENCE</span></div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-tab="dash">Dashboard</div>
+    <div class="nav-tab" data-tab="bets">Bet Log</div>
+    <div class="nav-tab" data-tab="insights">Insights</div>
+    <div class="nav-tab" data-tab="patterns">Patterns</div>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-wrapped" id="openWrapped" style="display:none">✨ MY WRAPPED</button>
+    <button class="btn btn-ghost" id="loadSample">⚡ Sample</button>
+    <button class="btn btn-ghost" id="openUpload">⬆ Import</button>
+    <button class="btn btn-danger" id="clearData" style="display:none">Clear</button>
+  </div>
+</nav>
+
+<!-- WRAPPED STORY OVERLAY -->
+<div class="wrapped" id="wrappedOverlay">
+  <div class="wp-progress" id="wpProgress"></div>
+  <button class="wp-close" onclick="closeWrapped()">×</button>
+  <div class="wp-nav-zone wp-nav-prev" onclick="wpPrev()"></div>
+  <div class="wp-nav-zone wp-nav-next" onclick="wpNext()"></div>
+  <div class="wp-stage" id="wpStage"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- EMPTY STATE -->
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg>
+    </div>
+    <h1>Know your tilt before it knows you.</h1>
+    <p>Connect your bet history and TILT analyzes your behavioral patterns to find the leaks costing you money. Most bettors lose because of how they bet, not what they bet on.</p>
+    <div class="empty-actions">
+      <button class="btn btn-primary" id="emptyLoadSample">⚡ Try With Sample Data</button>
+      <button class="btn btn-ghost" id="emptyUpload">⬆ Import Your Bet History</button>
+    </div>
+
+    <div class="empty-features">
+      <div class="feat"><div class="feat-icon" style="background:var(--red-bg);color:var(--red)">🔥</div><div class="feat-title">Tilt Detection</div><div class="feat-desc">Daily tilt score from stake creep, late-night bets, and bet-after-loss patterns.</div></div>
+      <div class="feat"><div class="feat-icon" style="background:var(--amber-bg);color:var(--amber)">↻</div><div class="feat-title">Chasing Analysis</div><div class="feat-desc">Compares your behavior after losses vs wins. Catches revenge betting.</div></div>
+      <div class="feat"><div class="feat-icon" style="background:var(--blue-bg);color:var(--blue)">⏱</div><div class="feat-title">Time Patterns</div><div class="feat-desc">Heatmap of when you bet vs when you actually win.</div></div>
+      <div class="feat"><div class="feat-icon" style="background:var(--green-bg);color:var(--green)">◎</div><div class="feat-title">Leak Finder</div><div class="feat-desc">Ranks bet types and sports by ROI to surface where you bleed money.</div></div>
+      <div class="feat"><div class="feat-icon" style="background:var(--purple);color:#0a0f13">▲</div><div class="feat-title">Discipline Score</div><div class="feat-desc">Single 0-100 score across stake consistency, chasing, sizing, and timing.</div></div>
+      <div class="feat"><div class="feat-icon" style="background:var(--teal);color:#0a0f13">∿</div><div class="feat-title">CLV Tracking</div><div class="feat-desc">Closing line value — the only metric that predicts long-term sharpness.</div></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="dash" id="dashboard">
+
+    <!-- WRAPPED HERO BANNER -->
+    <div id="wrappedHero" style="background:linear-gradient(135deg,#ff6e40,#ff5252,#e040fb);background-size:200% 200%;animation:gradShift 6s ease infinite;border-radius:14px;padding:22px 26px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:20px;cursor:pointer;transition:transform .2s;box-shadow:0 8px 30px rgba(255,82,82,.25)" onclick="openWrapped()">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.8);text-transform:uppercase;margin-bottom:4px">✨ NEW · YOUR BETTING STORY</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:#fff;letter-spacing:-.5px">TILT Wrapped is ready.</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:3px">A 60-second story of your bets, your habits, and your inner gambler.</div>
+      </div>
+      <button class="btn" style="background:#fff;color:#000;font-weight:800;padding:12px 22px;font-size:13px;flex-shrink:0">▶ PLAY MY WRAPPED</button>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- DISCIPLINE + TILT -->
+    <div class="row-discipline">
+      <div class="card disc-card">
+        <div class="card-header" style="width:100%">
+          <div class="card-title">Discipline Score <span class="badge">COMPOSITE</span></div>
+        </div>
+        <div class="gauge"><canvas id="gaugeCanvas" width="240" height="240"></canvas>
+          <div class="gauge-label">
+            <div class="gauge-value" id="discValue">—</div>
+            <div class="gauge-max">/ 100</div>
+            <div class="gauge-tier" id="discTier">—</div>
+          </div>
+        </div>
+        <div class="disc-breakdown" id="discBreakdown"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Tilt Timeline <span class="badge">DAILY</span></div>
+          <div class="card-subtitle" id="tiltSubtitle">—</div>
+        </div>
+        <div class="tilt-grid" id="tiltGrid"></div>
+        <div class="tilt-legend">
+          <span>LESS</span>
+          <div class="tilt-legend-cells">
+            <div class="tilt-legend-cell" style="background:#1a2535"></div>
+            <div class="tilt-legend-cell" style="background:rgba(255,171,0,.3)"></div>
+            <div class="tilt-legend-cell" style="background:rgba(255,171,0,.6)"></div>
+            <div class="tilt-legend-cell" style="background:rgba(255,82,82,.7)"></div>
+            <div class="tilt-legend-cell" style="background:var(--red)"></div>
+          </div>
+          <span>MORE TILT</span>
+          <span style="margin-left:auto" id="worstDay"></span>
+        </div>
+        <div style="margin-top:18px">
+          <div class="card-title" style="font-size:12px;margin-bottom:10px">Bankroll Progression</div>
+          <div class="chart-box"><canvas id="bankrollChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="section-title">Personalized Insights</div>
+    <div class="card">
+      <div id="insightsList"></div>
+    </div>
+
+    <!-- CHASING + STAKE -->
+    <div class="row">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Chasing Detector</div>
+          <div class="card-subtitle">post-result behavior</div>
+        </div>
+        <div id="chasingPanel"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Stake Sizing</div>
+          <div class="card-subtitle">creep & variance</div>
+        </div>
+        <div class="chart-box"><canvas id="stakeChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- TIME PATTERNS -->
+    <div class="row">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Hour-of-Day Performance</div>
+          <div class="card-subtitle">when you bet vs when you win</div>
+        </div>
+        <div class="chart-box"><canvas id="hourChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Day-of-Week Performance</div>
+          <div class="card-subtitle">ROI by weekday</div>
+        </div>
+        <div class="chart-box"><canvas id="dowChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- BREAKDOWNS -->
+    <div class="row">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Sport Breakdown</div>
+          <div class="card-subtitle">edge vs leak by sport</div>
+        </div>
+        <div id="sportTable"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Bet Type Breakdown</div>
+          <div class="card-subtitle">where the leaks live</div>
+        </div>
+        <div id="betTypeTable"></div>
+      </div>
+    </div>
+
+    <!-- STREAKS + BANKROLL -->
+    <div class="row-3">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Current Streak</div></div>
+        <div id="streakBox"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Drawdown</div></div>
+        <div id="drawdownBox"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Volatility</div></div>
+        <div id="volBox"></div>
+      </div>
+    </div>
+
+    <!-- BET LOG (dashboard preview) -->
+    <div class="section-title">Recent Bets</div>
+    <div class="card">
+      <div style="overflow-x:auto"><table id="betsTable"></table></div>
+    </div>
+
+  </div>
+
+  <!-- ============ BET LOG TAB ============ -->
+  <div class="tab-view" id="tabBets">
+    <div class="section-title">Full Bet Log</div>
+    <div class="card">
+      <div class="filter-row">
+        <input type="text" class="filter-input" id="betSearch" placeholder="Search selections...">
+        <select class="filter-select" id="betFilterSport"><option value="">All Sports</option></select>
+        <select class="filter-select" id="betFilterType"><option value="">All Types</option></select>
+        <select class="filter-select" id="betFilterResult"><option value="">All Results</option><option value="win">Win</option><option value="loss">Loss</option><option value="push">Push</option></select>
+        <select class="filter-select" id="betFilterBook"><option value="">All Books</option></select>
+        <select class="filter-select" id="betSort">
+          <option value="date-desc">Newest First</option>
+          <option value="date-asc">Oldest First</option>
+          <option value="profit-desc">Best P/L</option>
+          <option value="profit-asc">Worst P/L</option>
+          <option value="stake-desc">Highest Stake</option>
+        </select>
+        <div class="filter-count" id="betCount">—</div>
+      </div>
+      <div style="overflow-x:auto"><table id="fullBetsTable"></table></div>
+      <div class="pagination" id="betPagination"></div>
+    </div>
+  </div>
+
+  <!-- ============ INSIGHTS TAB ============ -->
+  <div class="tab-view" id="tabInsights">
+    <div class="section-title">All Insights</div>
+    <div class="card">
+      <div id="fullInsightsList"></div>
+    </div>
+    <div class="row">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Discipline Score Breakdown</div></div>
+        <div id="insDiscBreakdown"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Chasing Deep Dive</div></div>
+        <div id="insChasingDeep"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Performance by Closing Line Value</div></div>
+      <div id="insCLVPanel"></div>
+    </div>
+  </div>
+
+  <!-- ============ PATTERNS TAB ============ -->
+  <div class="tab-view" id="tabPatterns">
+    <div class="section-title">Behavioral Patterns</div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Day × Hour Heatmap <span class="badge">ROI</span></div>
+        <div class="card-subtitle">green = profitable, red = leak</div>
+      </div>
+      <div id="dayHourHeatmap"></div>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Monthly Performance</div></div>
+        <div id="monthlyPanel"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Sportsbook Performance</div></div>
+        <div id="bookPanel"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Stake Over Time</div></div>
+        <div class="chart-box-tall"><canvas id="stakeTimeChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Cumulative Profit by Sport</div></div>
+        <div class="chart-box-tall"><canvas id="sportCumChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Win Rate Rolling (30-bet window)</div></div>
+      <div class="chart-box-tall"><canvas id="rollingWRChart"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-bg" id="uploadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Import Bet History</h2>
+      <button class="modal-close" onclick="closeModal('uploadModal')">×</button>
+    </div>
+    <p class="sub">Upload a CSV exported from your sportsbook. We auto-map common column names.</p>
+
+    <div class="upload-zone" id="uploadZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <p><strong>Click to upload</strong> or drop a CSV here</p>
+      <input type="file" id="fileInput" accept=".csv" style="display:none">
+    </div>
+
+    <div class="csv-info">
+      <b>Expected columns</b> (case insensitive, flexible naming):<br>
+      date · sport · bet_type · description · stake · odds · result · profit · book · closing_odds (optional)<br><br>
+      <b>Result values:</b> win / loss / push / pending<br>
+      <b>Odds format:</b> American (+150, -110) or decimal (2.50, 1.91)
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal('uploadModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="downloadSampleCSV()">Download Template CSV</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+const STORE_KEY = 'tilt_bets_v1';
+let state = {
+  bets: [],
+  startingBankroll: 1000
+};
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+const $ = (id)=>document.getElementById(id);
+const fmt$ = (v)=>{const s=v<0?'-':'';v=Math.abs(v);return s+'$'+v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')};
+const fmtPct = (v,d=1)=>(v>=0?'+':'')+v.toFixed(d)+'%';
+const fmtNum = (v)=>v.toLocaleString('en-US');
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const median = (arr)=>{if(!arr.length)return 0;const s=[...arr].sort((a,b)=>a-b);const m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const mean = (arr)=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
+const std = (arr)=>{if(arr.length<2)return 0;const m=mean(arr);return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/(arr.length-1))};
+
+function americanToDecimal(o){o=Number(o);if(isNaN(o))return null;if(o>0)return o/100+1;return 100/-o+1}
+function americanToImplied(o){o=Number(o);if(isNaN(o))return null;if(o>0)return 100/(o+100);return -o/(-o+100)}
+function parseOdds(o){if(o==null||o==='')return null;const n=Number(o);if(isNaN(n))return null;if(n>=1.01&&n<=20&&!Number.isInteger(n))return n;return americanToDecimal(n)}
+
+function toast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = 'toast'+(type==='error'?' error':'');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 4000);
+}
+
+function openModal(id){$(id).classList.add('active')}
+function closeModal(id){$(id).classList.remove('active')}
+
+/* ============================================================
+   STORAGE
+   ============================================================ */
+function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(state))}catch(e){}}
+function load(){try{const d=localStorage.getItem(STORE_KEY);if(d){state=JSON.parse(d);if(!state.startingBankroll)state.startingBankroll=1000}}catch(e){}}
+
+/* ============================================================
+   SAMPLE DATA GENERATOR — realistic w/ embedded patterns
+   ============================================================ */
+function generateSampleData(){
+  const sports = ['NFL','NBA','MLB','NHL','UFC','SOCCER'];
+  const betTypes = ['Moneyline','Spread','Total','Player Prop','Parlay','Same Game Parlay'];
+  const books = ['DraftKings','FanDuel','BetMGM','Caesars'];
+  const teams = {
+    NFL:['Chiefs','Eagles','49ers','Cowboys','Bills','Ravens','Bengals','Lions','Dolphins','Jets','Patriots','Steelers','Browns','Vikings','Packers','Bears'],
+    NBA:['Lakers','Celtics','Warriors','Bucks','Nuggets','Heat','Knicks','Suns','Nets','76ers','Mavericks','Clippers','Kings','Grizzlies'],
+    MLB:['Yankees','Dodgers','Astros','Braves','Rays','Phillies','Mets','Padres','Cardinals','Cubs','Red Sox','Mariners'],
+    NHL:['Rangers','Avalanche','Lightning','Oilers','Maple Leafs','Bruins','Hurricanes','Stars','Panthers','Knights'],
+    UFC:['Jones','Adesanya','Volkanovski','Makhachev','Pereira','Whittaker'],
+    SOCCER:['Man City','Arsenal','Liverpool','Madrid','Barcelona','Bayern','PSG']
+  };
+
+  const bets = [];
+  const now = Date.now();
+  const dayMs = 86400000;
+  let lastResult = null;
+  let baseStake = 25;
+
+  // 6 months of data
+  for(let dayOffset=180; dayOffset>=0; dayOffset--){
+    const date = new Date(now - dayOffset*dayMs);
+    const dow = date.getDay();
+    // weekend = more bets
+    let nBets = Math.floor(Math.random()*4) + (dow===0||dow===6?2:1);
+    // tilt weekend ~ 60 days ago
+    const isTiltDay = dayOffset===60 || dayOffset===59;
+    if(isTiltDay) nBets = 14 + Math.floor(Math.random()*6);
+
+    for(let i=0;i<nBets;i++){
+      const sport = sports[Math.floor(Math.random()*sports.length)];
+      let betType = betTypes[Math.floor(Math.random()*betTypes.length)];
+      // Hours: bias toward evening
+      let hour;
+      const r = Math.random();
+      if(r<0.05) hour = Math.floor(Math.random()*7); // early morning
+      else if(r<0.4) hour = 12+Math.floor(Math.random()*6); // afternoon
+      else if(r<0.85) hour = 18+Math.floor(Math.random()*5); // prime
+      else hour = 23; // late
+      // Tilt day → late + impulsive
+      if(isTiltDay) hour = 22 + Math.floor(Math.random()*2);
+
+      const ts = new Date(date);
+      ts.setHours(hour, Math.floor(Math.random()*60), Math.floor(Math.random()*60));
+
+      // CHASING PATTERN: stake larger after losses
+      let stake = baseStake;
+      if(lastResult === 'loss') stake = baseStake * (1.4 + Math.random()*0.6);
+      else if(lastResult === 'win') stake = baseStake * (0.9 + Math.random()*0.3);
+      else stake = baseStake * (0.8 + Math.random()*0.4);
+      // Stake creep over time (slow)
+      stake *= 1 + (180-dayOffset)/180 * 0.3;
+      // Tilt day = mega stakes
+      if(isTiltDay) stake *= 1.8 + Math.random();
+      stake = Math.round(stake);
+
+      // Odds
+      const oddsRoll = Math.random();
+      let odds;
+      if(betType==='Parlay' || betType==='Same Game Parlay') odds = 200 + Math.floor(Math.random()*600);
+      else if(oddsRoll<0.45) odds = -110 - Math.floor(Math.random()*40);
+      else if(oddsRoll<0.7) odds = -150 - Math.floor(Math.random()*100);
+      else if(oddsRoll<0.9) odds = 110 + Math.floor(Math.random()*150);
+      else odds = -200 - Math.floor(Math.random()*100);
+
+      // Calculate true win prob from odds, then apply edge/leak
+      let trueProb = americanToImplied(odds);
+      // EDGE/LEAK PATTERNS:
+      if(sport==='NBA' && (betType==='Spread')) trueProb += 0.04; // edge
+      if(betType==='Parlay' || betType==='Same Game Parlay') trueProb -= 0.06; // leak
+      if(hour===23 || hour<5) trueProb -= 0.05; // late night = bad
+      if(isTiltDay) trueProb -= 0.08; // tilted bets lose more
+      if(sport==='MLB' && betType==='Total') trueProb += 0.025;
+      if(sport==='UFC') trueProb -= 0.03;
+
+      let result, profit;
+      if(Math.random() < trueProb){
+        result = 'win';
+        const dec = americanToDecimal(odds);
+        profit = +(stake * (dec - 1)).toFixed(2);
+      } else if(Math.random()<0.02){
+        result = 'push';
+        profit = 0;
+      } else {
+        result = 'loss';
+        profit = -stake;
+      }
+      lastResult = result;
+
+      // Description
+      const teamList = teams[sport] || teams.NBA;
+      const team1 = teamList[Math.floor(Math.random()*teamList.length)];
+      let team2;
+      do{ team2 = teamList[Math.floor(Math.random()*teamList.length)]; }while(team2===team1);
+      let desc;
+      if(betType==='Moneyline') desc = `${team1} ML`;
+      else if(betType==='Spread') desc = `${team1} ${(Math.random()<0.5?'-':'+')}${(Math.floor(Math.random()*10)+1)+(Math.random()<0.5?'.5':'')}`;
+      else if(betType==='Total') desc = `${team1} vs ${team2} ${Math.random()<0.5?'O':'U'}${Math.floor(Math.random()*30)+180}.5`;
+      else if(betType==='Player Prop') desc = `${['Anytime TD','Pass Yds','Points','Assists','Strikeouts'][Math.floor(Math.random()*5)]} O${(Math.random()*30+10).toFixed(1)}`;
+      else desc = `${betType} (${Math.floor(Math.random()*4)+2} legs)`;
+
+      // Closing odds (slight movement)
+      const closing = odds + (Math.random()<0.5?-1:1)*Math.floor(Math.random()*15);
+
+      bets.push({
+        id: 'b'+bets.length,
+        date: ts.toISOString(),
+        sport, betType, description: desc,
+        stake, odds, result, profit,
+        book: books[Math.floor(Math.random()*books.length)],
+        closingOdds: closing
+      });
+    }
+  }
+  bets.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  return bets;
+}
+
+/* ============================================================
+   CSV PARSING with auto-column mapping
+   ============================================================ */
+const COL_MAP = {
+  date: ['date','timestamp','time','placed','placed_at','bet_date','datetime'],
+  sport: ['sport','league','category'],
+  betType: ['bet_type','bettype','type','market','wager_type'],
+  description: ['description','selection','pick','bet','wager','event'],
+  stake: ['stake','wager','amount','risk','bet_amount'],
+  odds: ['odds','price','american_odds','line'],
+  result: ['result','status','outcome','settled'],
+  profit: ['profit','pnl','net','payout','win_loss','return'],
+  book: ['book','sportsbook','site','operator'],
+  closingOdds: ['closing_odds','close','closing_line','clv_line']
+};
+function autoMap(headers){
+  const mapping = {};
+  const lower = headers.map(h=>h.toLowerCase().trim().replace(/[\s_-]+/g,'_'));
+  for(const [field, aliases] of Object.entries(COL_MAP)){
+    for(const a of aliases){
+      const idx = lower.indexOf(a.replace(/[\s_-]+/g,'_'));
+      if(idx >= 0){ mapping[field] = headers[idx]; break; }
+    }
+  }
+  return mapping;
+}
+function parseCSV(text){
+  const parsed = Papa.parse(text, {header:true, skipEmptyLines:true, dynamicTyping:false});
+  if(parsed.errors.length) console.warn('CSV warnings', parsed.errors);
+  const headers = parsed.meta.fields || [];
+  const map = autoMap(headers);
+  const required = ['date','stake','result'];
+  for(const r of required){ if(!map[r]) throw new Error(`Missing required column: ${r}. Found: ${headers.join(', ')}`); }
+  const bets = [];
+  for(const row of parsed.data){
+    try{
+      const d = new Date(row[map.date]);
+      if(isNaN(d)) continue;
+      const stake = Number(String(row[map.stake]).replace(/[$,]/g,''));
+      if(isNaN(stake) || stake<=0) continue;
+      let result = String(row[map.result]||'').toLowerCase().trim();
+      if(['w','won','winner'].includes(result)) result='win';
+      else if(['l','lost','loser'].includes(result)) result='loss';
+      else if(['p','tie','void'].includes(result)) result='push';
+      let profit = map.profit ? Number(String(row[map.profit]).replace(/[$,]/g,'')) : null;
+      if(profit==null || isNaN(profit)){
+        if(result==='win'){
+          const dec = parseOdds(row[map.odds]);
+          profit = dec ? stake*(dec-1) : stake*0.91;
+        } else if(result==='loss') profit = -stake;
+        else profit = 0;
+      }
+      bets.push({
+        id: 'i'+bets.length,
+        date: d.toISOString(),
+        sport: row[map.sport] || 'UNKNOWN',
+        betType: row[map.betType] || 'Unknown',
+        description: row[map.description] || '',
+        stake, odds: row[map.odds] || null,
+        result, profit,
+        book: row[map.book] || '',
+        closingOdds: row[map.closingOdds] || null
+      });
+    }catch(e){console.warn('row skip',e)}
+  }
+  bets.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  return bets;
+}
+
+function downloadSampleCSV(){
+  const rows = [['date','sport','bet_type','description','stake','odds','result','profit','book','closing_odds']];
+  const sample = generateSampleData().slice(0,50);
+  for(const b of sample) rows.push([b.date,b.sport,b.betType,b.description,b.stake,b.odds,b.result,b.profit,b.book,b.closingOdds]);
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'tilt_template.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ============================================================
+   ANALYTICS
+   ============================================================ */
+function calcKPIs(bets){
+  const settled = bets.filter(b=>b.result!=='pending');
+  const wins = settled.filter(b=>b.result==='win').length;
+  const losses = settled.filter(b=>b.result==='loss').length;
+  const totalWagered = settled.reduce((s,b)=>s+b.stake,0);
+  const profit = settled.reduce((s,b)=>s+b.profit,0);
+  const roi = totalWagered ? (profit/totalWagered*100) : 0;
+  const wr = (wins+losses) ? wins/(wins+losses)*100 : 0;
+  // CLV
+  const clvBets = settled.filter(b=>b.odds!=null && b.closingOdds!=null);
+  let clv = 0;
+  if(clvBets.length){
+    const clvs = clvBets.map(b=>{
+      const t = parseOdds(b.odds), c = parseOdds(b.closingOdds);
+      if(!t||!c) return 0;
+      return (t - c) / c * 100;
+    });
+    clv = mean(clvs);
+  }
+  return {totalBets:settled.length, totalWagered, profit, roi, winRate:wr, wins, losses, clv, hasCLV: clvBets.length>0};
+}
+
+function calcDiscipline(bets){
+  const settled = bets.filter(b=>b.result!=='pending');
+  if(settled.length<5) return {score:0, parts:{}};
+
+  // 1. Stake Consistency: low CV is good
+  const stakes = settled.map(b=>b.stake);
+  const m = mean(stakes), s = std(stakes);
+  const cv = m ? s/m : 1;
+  const stakeConsistency = clamp(100 - cv*60, 0, 100);
+
+  // 2. No Chasing: ratio of stakes after losses vs wins
+  let stakeAfterLoss=[], stakeAfterWin=[];
+  for(let i=1;i<settled.length;i++){
+    const prev = settled[i-1];
+    if(prev.result==='loss') stakeAfterLoss.push(settled[i].stake);
+    else if(prev.result==='win') stakeAfterWin.push(settled[i].stake);
+  }
+  const ratio = (mean(stakeAfterWin)>0) ? mean(stakeAfterLoss)/mean(stakeAfterWin) : 1;
+  const chaseScore = clamp(100 - Math.abs(ratio-1)*120, 0, 100);
+
+  // 3. Bankroll mgmt: % of bets within 5% of running bankroll
+  let br = state.startingBankroll;
+  let safe=0;
+  for(const b of settled){
+    if(br>0 && b.stake/br < 0.05) safe++;
+    br += b.profit;
+  }
+  const bankrollScore = settled.length ? safe/settled.length*100 : 0;
+
+  // 4. Time discipline: avoid late-night
+  const lateNight = settled.filter(b=>{const h=new Date(b.date).getHours();return h>=23 || h<5}).length;
+  const timeScore = clamp(100 - (lateNight/settled.length)*250, 0, 100);
+
+  // 5. Focus: bet type concentration (Herfindahl)
+  const typeCount = {};
+  for(const b of settled) typeCount[b.betType] = (typeCount[b.betType]||0)+1;
+  const total = settled.length;
+  const hhi = Object.values(typeCount).reduce((s,c)=>s+(c/total)**2,0);
+  const focusScore = clamp(hhi*150, 0, 100);
+
+  // 6. CLV positive %
+  const clvBets = settled.filter(b=>b.odds!=null && b.closingOdds!=null);
+  let clvScore = 50;
+  if(clvBets.length){
+    const pos = clvBets.filter(b=>{
+      const t = parseOdds(b.odds), c = parseOdds(b.closingOdds);
+      return t && c && t > c;
+    }).length;
+    clvScore = pos/clvBets.length*100;
+  }
+
+  const parts = {
+    'Stake Consistency': stakeConsistency,
+    'No Chasing': chaseScore,
+    'Bankroll Mgmt': bankrollScore,
+    'Time Discipline': timeScore,
+    'Focus': focusScore,
+    'CLV': clvScore
+  };
+  const score = mean(Object.values(parts));
+  return {score, parts, ratio, lateNight, lateNightPct: lateNight/settled.length*100};
+}
+
+function calcDailyTilt(bets){
+  // Group bets by date
+  const byDate = {};
+  bets.forEach(b=>{
+    const k = b.date.slice(0,10);
+    (byDate[k] = byDate[k] || []).push(b);
+  });
+  // Build per-day metrics over time-window baseline
+  const days = Object.keys(byDate).sort();
+  const stakes = bets.map(b=>b.stake);
+  const baselineStake = median(stakes);
+  const baselineCount = median(Object.values(byDate).map(d=>d.length));
+  return days.map(d=>{
+    const dayBets = byDate[d];
+    const cnt = dayBets.length;
+    const totalStake = dayBets.reduce((s,b)=>s+b.stake,0);
+    const maxStake = Math.max(...dayBets.map(b=>b.stake));
+    const lateNight = dayBets.filter(b=>{const h=new Date(b.date).getHours();return h>=23||h<5}).length;
+    // bet-after-loss within 30min
+    let revenge = 0;
+    const sorted = [...dayBets].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    for(let i=1;i<sorted.length;i++){
+      if(sorted[i-1].result==='loss'){
+        const dt = (new Date(sorted[i].date)-new Date(sorted[i-1].date))/60000;
+        if(dt<30 && sorted[i].stake > sorted[i-1].stake*1.3) revenge++;
+      }
+    }
+    // composite tilt
+    const stakeRatio = totalStake / (baselineStake*baselineCount || 1);
+    const cntRatio = cnt / (baselineCount || 1);
+    const big = maxStake / (baselineStake || 1);
+    const score = clamp(
+      stakeRatio*15 + cntRatio*10 + big*5 + lateNight*8 + revenge*15 - 20,
+      0, 100
+    );
+    return {date:d, count:cnt, totalStake, maxStake, lateNight, revenge, score};
+  });
+}
+
+function calcChasing(bets){
+  const settled = bets.filter(b=>b.result!=='pending');
+  const afterLoss = [], afterWin = [], wrAfterLoss = [], wrAfterWin = [];
+  for(let i=1;i<settled.length;i++){
+    const prev = settled[i-1], cur = settled[i];
+    if(prev.result==='loss'){afterLoss.push(cur.stake); wrAfterLoss.push(cur.result==='win'?1:0)}
+    else if(prev.result==='win'){afterWin.push(cur.stake); wrAfterWin.push(cur.result==='win'?1:0)}
+  }
+  return {
+    avgStakeAfterLoss: mean(afterLoss),
+    avgStakeAfterWin: mean(afterWin),
+    wrAfterLoss: mean(wrAfterLoss)*100,
+    wrAfterWin: mean(wrAfterWin)*100,
+    nLoss: afterLoss.length,
+    nWin: afterWin.length
+  };
+}
+
+function calcHourPerf(bets){
+  const settled = bets.filter(b=>b.result!=='pending');
+  const buckets = Array(24).fill(0).map(()=>({n:0,wagered:0,profit:0,wins:0,losses:0}));
+  settled.forEach(b=>{
+    const h = new Date(b.date).getHours();
+    buckets[h].n++; buckets[h].wagered+=b.stake; buckets[h].profit+=b.profit;
+    if(b.result==='win') buckets[h].wins++;
+    else if(b.result==='loss') buckets[h].losses++;
+  });
+  return buckets.map((b,h)=>({hour:h, ...b, roi:b.wagered?(b.profit/b.wagered*100):0, wr:(b.wins+b.losses)?b.wins/(b.wins+b.losses)*100:0}));
+}
+
+function calcDoWPerf(bets){
+  const settled = bets.filter(b=>b.result!=='pending');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const buckets = days.map(d=>({day:d,n:0,wagered:0,profit:0,wins:0,losses:0}));
+  settled.forEach(b=>{
+    const d = new Date(b.date).getDay();
+    buckets[d].n++; buckets[d].wagered+=b.stake; buckets[d].profit+=b.profit;
+    if(b.result==='win') buckets[d].wins++;
+    else if(b.result==='loss') buckets[d].losses++;
+  });
+  return buckets.map(b=>({...b, roi:b.wagered?b.profit/b.wagered*100:0, wr:(b.wins+b.losses)?b.wins/(b.wins+b.losses)*100:0}));
+}
+
+function calcGroupBy(bets, key){
+  const settled = bets.filter(b=>b.result!=='pending');
+  const groups = {};
+  settled.forEach(b=>{
+    const k = b[key] || 'Unknown';
+    if(!groups[k]) groups[k] = {n:0,wagered:0,profit:0,wins:0,losses:0};
+    groups[k].n++; groups[k].wagered+=b.stake; groups[k].profit+=b.profit;
+    if(b.result==='win') groups[k].wins++;
+    else if(b.result==='loss') groups[k].losses++;
+  });
+  return Object.entries(groups).map(([k,v])=>({
+    key:k, ...v,
+    roi: v.wagered?v.profit/v.wagered*100:0,
+    wr: (v.wins+v.losses)?v.wins/(v.wins+v.losses)*100:0
+  })).sort((a,b)=>b.profit-a.profit);
+}
+
+function calcStreaks(bets){
+  const settled = bets.filter(b=>b.result!=='pending');
+  if(!settled.length) return {current:{type:'none',n:0}, longestW:0, longestL:0};
+  let curType = settled[settled.length-1].result;
+  let curN = 0;
+  for(let i=settled.length-1;i>=0;i--){
+    if(settled[i].result===curType) curN++;
+    else break;
+  }
+  let longestW=0, longestL=0, runT=null, runN=0;
+  for(const b of settled){
+    if(b.result===runT) runN++;
+    else { if(runT==='win') longestW=Math.max(longestW,runN); if(runT==='loss') longestL=Math.max(longestL,runN); runT=b.result; runN=1; }
+  }
+  if(runT==='win') longestW=Math.max(longestW,runN);
+  if(runT==='loss') longestL=Math.max(longestL,runN);
+  return {current:{type:curType, n:curN}, longestW, longestL};
+}
+
+function calcBankrollSeries(bets){
+  const settled = bets.filter(b=>b.result!=='pending');
+  let br = state.startingBankroll;
+  const series = [{x:settled[0]?new Date(settled[0].date):new Date(), y:br}];
+  let peak = br, maxDD = 0;
+  for(const b of settled){
+    br += b.profit;
+    if(br>peak) peak = br;
+    const dd = peak ? (peak-br)/peak*100 : 0;
+    if(dd>maxDD) maxDD = dd;
+    series.push({x:new Date(b.date), y:br});
+  }
+  return {series, maxDD, current:br, peak};
+}
+
+/* ============================================================
+   INSIGHTS ENGINE
+   ============================================================ */
+function generateInsights(bets){
+  const insights = [];
+  const k = calcKPIs(bets);
+  const c = calcChasing(bets);
+  const hours = calcHourPerf(bets);
+  const dows = calcDoWPerf(bets);
+  const sports = calcGroupBy(bets,'sport');
+  const types = calcGroupBy(bets,'betType');
+  const disc = calcDiscipline(bets);
+  const tilts = calcDailyTilt(bets);
+
+  // 1. Chasing
+  if(c.avgStakeAfterLoss > c.avgStakeAfterWin*1.2 && c.nLoss>10){
+    const ratio = (c.avgStakeAfterLoss/c.avgStakeAfterWin).toFixed(2);
+    insights.push({sev:'critical', icon:'↻', title:'You chase losses',
+      desc:`Your avg stake after a loss (${fmt$(c.avgStakeAfterLoss)}) is ${ratio}x larger than after a win (${fmt$(c.avgStakeAfterWin)}). This is the #1 killer of bankrolls.`,
+      impact:`SAMPLE: ${c.nLoss} post-loss bets, ${c.nWin} post-win bets`});
+  }
+
+  // 2. Late night
+  if(disc.lateNightPct > 8){
+    const lateBets = bets.filter(b=>b.result!=='pending').filter(b=>{const h=new Date(b.date).getHours();return h>=23||h<5});
+    const lateProfit = lateBets.reduce((s,b)=>s+b.profit,0);
+    const lateWagered = lateBets.reduce((s,b)=>s+b.stake,0);
+    const lateRoi = lateWagered?(lateProfit/lateWagered*100):0;
+    insights.push({sev:'critical', icon:'☾', title:'Your late-night bets are bleeding you',
+      desc:`${lateBets.length} bets placed after 11pm or before 5am totaling ${fmt$(lateProfit)} (${fmtPct(lateRoi)} ROI). Consider a self-imposed cutoff.`,
+      impact:`${disc.lateNightPct.toFixed(1)}% of all bets`});
+  }
+
+  // 3. Worst sport
+  if(sports.length>1){
+    const worst = sports.filter(s=>s.n>=10).sort((a,b)=>a.roi-b.roi)[0];
+    if(worst && worst.roi < -8){
+      insights.push({sev:'warn', icon:'▽', title:`${worst.key} is a leak`,
+        desc:`You're ${fmtPct(worst.roi)} ROI across ${worst.n} ${worst.key} bets, losing ${fmt$(-worst.profit)}. Consider cutting this sport entirely.`,
+        impact:`${worst.wins}-${worst.losses} record`});
+    }
+  }
+
+  // 4. Worst bet type
+  if(types.length>1){
+    const worstT = types.filter(t=>t.n>=10).sort((a,b)=>a.roi-b.roi)[0];
+    if(worstT && worstT.roi < -10){
+      insights.push({sev:'warn', icon:'⚠', title:`${worstT.key} bets are killing you`,
+        desc:`${fmtPct(worstT.roi)} ROI across ${worstT.n} ${worstT.key} bets (${fmt$(worstT.profit)}). Parlays especially are usually negative-EV.`,
+        impact:`${worstT.wins}-${worstT.losses} record`});
+    }
+  }
+
+  // 5. Best sport (positive insight)
+  if(sports.length>1){
+    const best = sports.filter(s=>s.n>=10).sort((a,b)=>b.roi-a.roi)[0];
+    if(best && best.roi > 5){
+      insights.push({sev:'good', icon:'△', title:`${best.key} is your edge`,
+        desc:`You're ${fmtPct(best.roi)} ROI across ${best.n} ${best.key} bets (${fmt$(best.profit)}). Consider doubling down here.`,
+        impact:`${best.wins}-${best.losses} record`});
+    }
+  }
+
+  // 6. Worst day of week
+  const worstDow = dows.filter(d=>d.n>=5).sort((a,b)=>a.roi-b.roi)[0];
+  if(worstDow && worstDow.roi < -8){
+    insights.push({sev:'info', icon:'☷', title:`${worstDow.day} is your worst day`,
+      desc:`${fmtPct(worstDow.roi)} ROI on ${worstDow.day}s. ${worstDow.day === 'Sun' || worstDow.day==='Sat' ? 'Weekend volume can amplify mistakes.' : ''}`,
+      impact:`${worstDow.n} bets, ${fmt$(worstDow.profit)}`});
+  }
+
+  // 7. Tilt episodes
+  const tiltDays = tilts.filter(t=>t.score>60);
+  if(tiltDays.length){
+    const worst = [...tiltDays].sort((a,b)=>b.score-a.score)[0];
+    insights.push({sev:'critical', icon:'🔥', title:`${tiltDays.length} tilt episode${tiltDays.length>1?'s':''} detected`,
+      desc:`Worst was ${new Date(worst.date).toLocaleDateString()} with tilt score ${worst.score.toFixed(0)}/100 — ${worst.count} bets, ${fmt$(worst.totalStake)} wagered, ${worst.lateNight} late-night, ${worst.revenge} revenge bets.`,
+      impact:`Tilt days have ${tiltDays.length>0?'much':''} worse outcomes than baseline`});
+  }
+
+  // 8. Stake creep
+  const settled = bets.filter(b=>b.result!=='pending');
+  if(settled.length>=40){
+    const firstQ = settled.slice(0, Math.floor(settled.length/4));
+    const lastQ = settled.slice(-Math.floor(settled.length/4));
+    const avgFirst = mean(firstQ.map(b=>b.stake));
+    const avgLast = mean(lastQ.map(b=>b.stake));
+    if(avgLast > avgFirst*1.4){
+      insights.push({sev:'warn', icon:'↗', title:'Stake creep detected',
+        desc:`Your average stake has grown from ${fmt$(avgFirst)} to ${fmt$(avgLast)} (${((avgLast/avgFirst-1)*100).toFixed(0)}% increase). Make sure your bankroll has grown accordingly.`,
+        impact:`Comparing first 25% vs last 25% of bets`});
+    }
+  }
+
+  // 9. CLV
+  if(k.hasCLV){
+    if(k.clv > 1) insights.push({sev:'good', icon:'△', title:'Positive CLV — you bet sharp',
+      desc:`Your average CLV is ${fmtPct(k.clv,2)}. Beating the closing line is the strongest predictor of long-term profit, regardless of short-term variance.`, impact:'CLV is the truth'});
+    else if(k.clv < -2) insights.push({sev:'warn', icon:'▽', title:'Negative CLV',
+      desc:`You're getting worse prices than the close (${fmtPct(k.clv,2)}). Try betting earlier when lines are softer, or shop more books.`, impact:'CLV is the truth'});
+  }
+
+  // 10. Discipline
+  if(disc.score < 40) insights.push({sev:'critical', icon:'!', title:'Discipline breakdown',
+    desc:`Your discipline score is ${disc.score.toFixed(0)}/100. The biggest weak spots are stake variance and chasing patterns.`, impact:'Below 50 is danger zone'});
+  else if(disc.score > 75) insights.push({sev:'good', icon:'✓', title:'Strong discipline',
+    desc:`Your discipline score is ${disc.score.toFixed(0)}/100. You manage your bankroll and behavior well — this is where long-term winners separate.`, impact:'Above 70 is elite'});
+
+  // sort by severity
+  const sevOrder = {critical:0, warn:1, info:2, good:3};
+  insights.sort((a,b)=>sevOrder[a.sev]-sevOrder[b.sev]);
+  return insights;
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+let charts = {};
+function destroyCharts(){ Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={}; }
+
+function render(){
+  if(!state.bets.length){
+    $('emptyState').style.display='flex';
+    $('dashboard').classList.remove('active');
+    $('clearData').style.display='none';
+    $('openWrapped').style.display='none';
+    return;
+  }
+  $('emptyState').style.display='none';
+  $('dashboard').classList.add('active');
+  $('clearData').style.display='inline-flex';
+  $('openWrapped').style.display='inline-flex';
+
+  destroyCharts();
+  renderKPIs();
+  renderDiscipline();
+  renderTilt();
+  renderBankroll();
+  renderInsights();
+  renderChasing();
+  renderStakeChart();
+  renderHourChart();
+  renderDoWChart();
+  renderSportTable();
+  renderBetTypeTable();
+  renderStreaks();
+  renderBetsTable();
+}
+
+function renderKPIs(){
+  const k = calcKPIs(state.bets);
+  const html = [
+    {l:'Total Bets', v:fmtNum(k.totalBets), s:`${k.wins}W / ${k.losses}L`},
+    {l:'Wagered', v:fmt$(k.totalWagered), s:`avg ${fmt$(k.totalWagered/(k.totalBets||1))}`},
+    {l:'Net Profit', v:fmt$(k.profit), s:'all-time', cls:k.profit>=0?'green':'red'},
+    {l:'ROI', v:fmtPct(k.roi), s:'return on stakes', cls:k.roi>=0?'green':'red'},
+    {l:'Win Rate', v:k.winRate.toFixed(1)+'%', s:`${k.wins+k.losses} settled`, cls:'blue'},
+    {l:'CLV', v:k.hasCLV?fmtPct(k.clv,2):'—', s:k.hasCLV?'closing line':'no data', cls:k.hasCLV?(k.clv>=0?'green':'red'):'amber'},
+  ].map(x=>`<div class="kpi ${x.cls||''}"><div class="kpi-label">${x.l}</div><div class="kpi-value">${x.v}</div><div class="kpi-sub">${x.s}</div></div>`).join('');
+  $('kpiRow').innerHTML = html;
+}
+
+function renderDiscipline(){
+  const d = calcDiscipline(state.bets);
+  const score = d.score;
+  $('discValue').textContent = score.toFixed(0);
+  let tier = 'Reckless', color = '#ff5252';
+  if(score>=80){tier='Elite'; color='#00e676'}
+  else if(score>=65){tier='Disciplined'; color='#64ffda'}
+  else if(score>=50){tier='Average'; color='#ffab00'}
+  else if(score>=35){tier='Loose'; color='#ff8a65'}
+  $('discTier').textContent = tier;
+  $('discTier').style.color = color;
+
+  // Draw gauge
+  const cnv = $('gaugeCanvas');
+  const ctx = cnv.getContext('2d');
+  ctx.clearRect(0,0,240,240);
+  const cx = 120, cy = 120, r = 100;
+  // bg arc
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI*0.75, Math.PI*0.25 + Math.PI*2);
+  ctx.lineWidth = 14;
+  ctx.strokeStyle = '#1c2a3a';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // value arc
+  const start = Math.PI*0.75;
+  const end = start + (Math.PI*1.5)*(score/100);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, start, end);
+  ctx.lineWidth = 14;
+  const grad = ctx.createLinearGradient(20,20,220,220);
+  grad.addColorStop(0,'#ff5252');
+  grad.addColorStop(0.5,'#ffab00');
+  grad.addColorStop(1,'#00e676');
+  ctx.strokeStyle = grad;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // breakdown bars
+  const html = Object.entries(d.parts).map(([k,v])=>{
+    let c = '#ff5252';
+    if(v>=70) c='#00e676'; else if(v>=50) c='#ffab00'; else if(v>=30) c='#ff8a65';
+    return `<div class="disc-row"><div class="disc-row-label">${k}</div><div class="disc-bar"><div class="disc-bar-fill" style="width:${v}%;background:${c}"></div></div><div class="disc-row-val">${v.toFixed(0)}</div></div>`;
+  }).join('');
+  $('discBreakdown').innerHTML = html;
+}
+
+function renderTilt(){
+  const tilts = calcDailyTilt(state.bets);
+  $('tiltSubtitle').textContent = `${tilts.length} days analyzed`;
+  // Render last 180 days
+  const recent = tilts.slice(-180);
+  const cells = recent.map(t=>{
+    const s = t.score;
+    let bg = '#1a2535';
+    if(s>=70) bg='var(--red)';
+    else if(s>=50) bg='rgba(255,82,82,.7)';
+    else if(s>=30) bg='rgba(255,171,0,.6)';
+    else if(s>=10) bg='rgba(255,171,0,.3)';
+    return `<div class="tilt-cell" style="background:${bg}" data-tip="${t.date} · ${t.count} bets · ${fmt$(t.totalStake)} · tilt ${t.score.toFixed(0)}"></div>`;
+  }).join('');
+  $('tiltGrid').innerHTML = cells;
+  const worst = [...tilts].sort((a,b)=>b.score-a.score)[0];
+  if(worst) $('worstDay').textContent = `Worst: ${new Date(worst.date).toLocaleDateString()} (${worst.score.toFixed(0)})`;
+}
+
+function renderBankroll(){
+  const {series, maxDD} = calcBankrollSeries(state.bets);
+  const cnv = $('bankrollChart');
+  const ctx = cnv.getContext('2d');
+  charts.bankroll = new Chart(ctx, {
+    type:'line',
+    data:{
+      datasets:[{
+        label:'Bankroll',
+        data:series,
+        borderColor:series[series.length-1].y >= state.startingBankroll ? '#00e676' : '#ff5252',
+        backgroundColor: (ctx)=>{
+          const grad = ctx.chart.ctx.createLinearGradient(0,0,0,200);
+          const last = series[series.length-1].y;
+          if(last >= state.startingBankroll){
+            grad.addColorStop(0,'rgba(0,230,118,.25)');
+            grad.addColorStop(1,'rgba(0,230,118,0)');
+          } else {
+            grad.addColorStop(0,'rgba(255,82,82,.25)');
+            grad.addColorStop(1,'rgba(255,82,82,0)');
+          }
+          return grad;
+        },
+        borderWidth:2, fill:true, pointRadius:0, tension:0.2
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:(c)=>'BR: '+fmt$(c.parsed.y)}}},
+      scales:{
+        x:{type:'time',time:{unit:'month'},grid:{display:false},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9}}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9},callback:v=>'$'+v}}
+      }
+    }
+  });
+}
+
+function renderInsights(){
+  const items = generateInsights(state.bets);
+  if(!items.length){ $('insightsList').innerHTML = `<div style="color:var(--sub);text-align:center;padding:20px">No major issues detected. Keep grinding.</div>`; return; }
+  $('insightsList').innerHTML = items.map(i=>`
+    <div class="insight ${i.sev}">
+      <div class="insight-icon">${i.icon}</div>
+      <div class="insight-body">
+        <div class="insight-title">${i.title}</div>
+        <div class="insight-desc">${i.desc}</div>
+        <div class="insight-impact">${i.impact}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderChasing(){
+  const c = calcChasing(state.bets);
+  const ratio = c.avgStakeAfterWin>0 ? c.avgStakeAfterLoss/c.avgStakeAfterWin : 1;
+  let alert = '';
+  if(ratio>1.3) alert = `<div style="margin-top:14px;padding:10px 12px;background:var(--red-bg);border:1px solid rgba(255,82,82,.2);border-radius:6px;color:var(--red);font-size:12px"><b>⚠ CHASING DETECTED:</b> ${ratio.toFixed(2)}x stake increase after losses</div>`;
+  else if(ratio<0.8) alert = `<div style="margin-top:14px;padding:10px 12px;background:var(--green-bg);border:1px solid rgba(0,230,118,.2);border-radius:6px;color:var(--green);font-size:12px"><b>✓ DISCIPLINED:</b> You bet smaller after losses</div>`;
+
+  $('chasingPanel').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--bg2);padding:14px;border-radius:8px;border:1px solid var(--border)">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase">After Loss</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;margin-top:4px;color:${ratio>1.3?'var(--red)':'var(--text)'}">${fmt$(c.avgStakeAfterLoss)}</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:4px">${c.nLoss} bets · ${c.wrAfterLoss.toFixed(1)}% WR</div>
+      </div>
+      <div style="background:var(--bg2);padding:14px;border-radius:8px;border:1px solid var(--border)">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase">After Win</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;margin-top:4px">${fmt$(c.avgStakeAfterWin)}</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:4px">${c.nWin} bets · ${c.wrAfterWin.toFixed(1)}% WR</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;text-align:center">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase">Stake Ratio</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:${ratio>1.3?'var(--red)':ratio<0.8?'var(--green)':'var(--text)'}">${ratio.toFixed(2)}x</div>
+    </div>
+    ${alert}
+  `;
+}
+
+function renderStakeChart(){
+  const settled = state.bets.filter(b=>b.result!=='pending');
+  // Bin stakes into buckets
+  const stakes = settled.map(b=>b.stake);
+  const max = Math.max(...stakes);
+  const nBins = 12;
+  const binSize = max/nBins;
+  const bins = Array(nBins).fill(0);
+  stakes.forEach(s=>{const i=Math.min(Math.floor(s/binSize),nBins-1);bins[i]++});
+  const labels = bins.map((_,i)=>`$${(i*binSize).toFixed(0)}-${((i+1)*binSize).toFixed(0)}`);
+  charts.stake = new Chart($('stakeChart'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Bets',data:bins,backgroundColor:'rgba(255,138,101,.6)',borderColor:'#ff8a65',borderWidth:1}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9},maxRotation:45,minRotation:45}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9}}}
+      }
+    }
+  });
+}
+
+function renderHourChart(){
+  const data = calcHourPerf(state.bets);
+  charts.hour = new Chart($('hourChart'),{
+    type:'bar',
+    data:{
+      labels:data.map(d=>d.hour+':00'),
+      datasets:[
+        {label:'Volume',data:data.map(d=>d.n),backgroundColor:'rgba(64,196,255,.4)',yAxisID:'y',order:2},
+        {label:'ROI %',data:data.map(d=>d.roi),type:'line',borderColor:'#ff8a65',backgroundColor:'#ff8a65',yAxisID:'y1',pointRadius:3,tension:0.3,order:1}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8a9db3',font:{size:10}}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9}}},
+        y:{position:'left',grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#40c4ff',font:{family:'JetBrains Mono',size:9}}},
+        y1:{position:'right',grid:{display:false},ticks:{color:'#ff8a65',font:{family:'JetBrains Mono',size:9},callback:v=>v+'%'}}
+      }
+    }
+  });
+}
+
+function renderDoWChart(){
+  const data = calcDoWPerf(state.bets);
+  charts.dow = new Chart($('dowChart'),{
+    type:'bar',
+    data:{
+      labels:data.map(d=>d.day),
+      datasets:[{
+        label:'ROI %',
+        data:data.map(d=>d.roi),
+        backgroundColor:data.map(d=>d.roi>=0?'rgba(0,230,118,.6)':'rgba(255,82,82,.6)'),
+        borderColor:data.map(d=>d.roi>=0?'#00e676':'#ff5252'),
+        borderWidth:1
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{afterLabel:(c)=>{const d=data[c.dataIndex];return `${d.n} bets, ${fmt$(d.profit)}`}}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:10}}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9},callback:v=>v+'%'}}
+      }
+    }
+  });
+}
+
+function renderTable(rows, container){
+  const html = `<thead><tr><th>${container==='sportTable'?'Sport':'Type'}</th><th class="t-num">Bets</th><th class="t-num">Wagered</th><th class="t-num">Profit</th><th class="t-num">ROI</th><th class="t-num">WR</th></tr></thead><tbody>${
+    rows.map(r=>`<tr>
+      <td>${r.key}</td>
+      <td class="t-num t-mut">${r.n}</td>
+      <td class="t-num t-mut">${fmt$(r.wagered)}</td>
+      <td class="t-num ${r.profit>=0?'t-pos':'t-neg'}">${fmt$(r.profit)}</td>
+      <td class="t-num ${r.roi>=0?'t-pos':'t-neg'}"><b>${fmtPct(r.roi)}</b></td>
+      <td class="t-num t-mut">${r.wr.toFixed(1)}%</td>
+    </tr>`).join('')
+  }</tbody>`;
+  $(container).innerHTML = `<table>${html}</table>`;
+}
+function renderSportTable(){ renderTable(calcGroupBy(state.bets,'sport'),'sportTable'); }
+function renderBetTypeTable(){ renderTable(calcGroupBy(state.bets,'betType'),'betTypeTable'); }
+
+function renderStreaks(){
+  const s = calcStreaks(state.bets);
+  const c = s.current;
+  const color = c.type==='win'?'var(--green)':c.type==='loss'?'var(--red)':'var(--sub)';
+  $('streakBox').innerHTML = `
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:48px;font-weight:800;color:${color};line-height:1">${c.n}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:1px;margin-top:6px;text-transform:uppercase">${c.type==='win'?'Win Streak':c.type==='loss'?'Loss Streak':'No Streak'}</div>
+      <div style="display:flex;justify-content:space-around;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+        <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">LONGEST W</div><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--green);font-weight:700">${s.longestW}</div></div>
+        <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">LONGEST L</div><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--red);font-weight:700">${s.longestL}</div></div>
+      </div>
+    </div>
+  `;
+
+  const br = calcBankrollSeries(state.bets);
+  $('drawdownBox').innerHTML = `
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:48px;font-weight:800;color:var(--red);line-height:1">${br.maxDD.toFixed(1)}%</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:1px;margin-top:6px;text-transform:uppercase">Max Drawdown</div>
+      <div style="display:flex;justify-content:space-around;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+        <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">PEAK</div><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700">${fmt$(br.peak)}</div></div>
+        <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">CURRENT</div><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:${br.current>=state.startingBankroll?'var(--green)':'var(--red)'}">${fmt$(br.current)}</div></div>
+      </div>
+    </div>
+  `;
+
+  const settled = state.bets.filter(b=>b.result!=='pending');
+  const profits = settled.map(b=>b.profit);
+  const sd = std(profits);
+  const sharpe = std(profits) ? mean(profits)/sd : 0;
+  $('volBox').innerHTML = `
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:48px;font-weight:800;color:var(--blue);line-height:1">${fmt$(sd)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:1px;margin-top:6px;text-transform:uppercase">Std Dev / Bet</div>
+      <div style="display:flex;justify-content:space-around;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+        <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">SHARPE</div><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:${sharpe>=0?'var(--green)':'var(--red)'}">${sharpe.toFixed(3)}</div></div>
+        <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">N BETS</div><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700">${settled.length}</div></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBetsTable(){
+  const recent = [...state.bets].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,40);
+  const html = `<thead><tr><th>Date</th><th>Sport</th><th>Type</th><th>Selection</th><th class="t-num">Stake</th><th class="t-num">Odds</th><th>Result</th><th class="t-num">P/L</th></tr></thead><tbody>${
+    recent.map(b=>{
+      const d = new Date(b.date);
+      const dateStr = d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+      const oddsStr = b.odds!=null ? (Number(b.odds)>0?'+'+b.odds:''+b.odds) : '—';
+      return `<tr>
+        <td class="t-mut" style="font-family:'JetBrains Mono',monospace;font-size:11px">${dateStr}</td>
+        <td>${b.sport}</td>
+        <td class="t-mut">${b.betType}</td>
+        <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.description}</td>
+        <td class="t-num">${fmt$(b.stake)}</td>
+        <td class="t-num t-mut">${oddsStr}</td>
+        <td><span class="pill pill-${b.result==='win'?'w':b.result==='loss'?'l':'p'}">${b.result}</span></td>
+        <td class="t-num ${b.profit>=0?'t-pos':'t-neg'}"><b>${fmt$(b.profit)}</b></td>
+      </tr>`;
+    }).join('')
+  }</tbody>`;
+  $('betsTable').innerHTML = html;
+}
+
+/* ============================================================
+   EVENT WIRING
+   ============================================================ */
+function loadSampleData(){
+  state.bets = generateSampleData();
+  state.startingBankroll = 1000;
+  save();
+  render();
+  toast(`Loaded ${state.bets.length} sample bets across 6 months`);
+}
+
+function clearAll(){
+  if(!confirm('Clear all data?')) return;
+  state = {bets:[], startingBankroll:1000};
+  save();
+  render();
+  toast('Cleared');
+}
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const bets = parseCSV(e.target.result);
+      if(!bets.length) throw new Error('No valid rows found');
+      state.bets = bets;
+      save();
+      render();
+      closeModal('uploadModal');
+      toast(`Imported ${bets.length} bets`);
+    }catch(err){
+      toast('Error: '+err.message,'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ============================================================
+   ✨ WRAPPED — STORY MODE LOGIC
+   ============================================================ */
+let wrappedState = { cards:[], idx:0, period:'week', timer:null };
+
+const PERSONALITIES = [
+  { id:'late_chaser',   name:'The Late-Night Chaser',     emoji:'🌙', tagline:'You bet when the world sleeps. And it shows.', test:(s)=>s.lateNightPct>15 && s.chaseRatio>1.2 },
+  { id:'tilt_lord',     name:'The Tilt Lord',             emoji:'🔥', tagline:'When you go off, you really go off.', test:(s)=>s.tiltDays>=2 },
+  { id:'parlay_dreamer',name:'The Parlay Dreamer',        emoji:'🎰', tagline:'Why bet $50 to win $45 when you can lose 8 legs?', test:(s)=>s.parlayPct>0.25 },
+  { id:'weekend_warrior',name:'The Weekend Warrior',      emoji:'🏈', tagline:'Mon-Fri you\'re fine. Sat-Sun, you\'re a different person.', test:(s)=>s.weekendPct>0.65 },
+  { id:'whale',         name:'The Whale',                 emoji:'🐋', tagline:'You don\'t play small. Bookmakers know your name.', test:(s)=>s.avgStake>200 },
+  { id:'specialist',    name:'The Specialist',            emoji:'🎯', tagline:'One sport. Surgical. Probably profitable.', test:(s)=>s.topSportPct>0.55 },
+  { id:'dabbler',       name:'The Dabbler',               emoji:'🦋', tagline:'You\'ve bet on 6 sports this period. Pick a lane.', test:(s)=>s.sportCount>=5 },
+  { id:'sniper',        name:'The Sniper',                emoji:'🥷', tagline:'Low volume. High conviction. Quietly winning.', test:(s)=>s.totalBets<30 && s.roi>5 },
+  { id:'grinder',       name:'The Grinder',               emoji:'⚙️', tagline:'Volume is your edge. Grinding out every basis point.', test:(s)=>s.totalBets>=100 && Math.abs(s.roi)<5 },
+  { id:'square',        name:'The Chalk Eater',           emoji:'🐑', tagline:'You only bet favorites. The books love you.', test:(s)=>s.favPct>0.7 },
+  { id:'sharp',         name:'The Sharp',                 emoji:'⚡', tagline:'Positive CLV. Books are starting to limit you.', test:(s)=>s.clv>1 },
+  { id:'unlucky',       name:'The Unlucky One',           emoji:'🥀', tagline:'You bet sharp. You lose anyway. Variance is a cruel god.', test:(s)=>s.clv>0 && s.roi<-3 },
+  { id:'disciplined',   name:'The Disciplined',           emoji:'🗿', tagline:'No tilt. No chasing. Just process.', test:(s)=>s.discipline>=75 },
+  { id:'reckless',      name:'The Free Spirit',           emoji:'🎲', tagline:'Discipline is for cowards. You\'re here for the rush.', test:(s)=>s.discipline<35 },
+  { id:'casual',        name:'The Casual',                emoji:'🍿', tagline:'You bet for fun. Honestly? Healthy approach.', test:(s)=>s.totalBets<20 },
+];
+
+function assignPersonality(stats){
+  for(const p of PERSONALITIES){ try{ if(p.test(stats)) return p; }catch(e){} }
+  return PERSONALITIES[PERSONALITIES.length-1];
+}
+
+function buildWrappedStats(bets){
+  const settled = bets.filter(b=>b.result!=='pending');
+  if(!settled.length) return null;
+  const k = calcKPIs(settled);
+  const c = calcChasing(settled);
+  const d = calcDiscipline(settled);
+  const tilts = calcDailyTilt(settled);
+  const sports = calcGroupBy(settled,'sport');
+  const types = calcGroupBy(settled,'betType');
+
+  const totalSeconds = settled.length * 45;
+  const hoursSpent = totalSeconds/3600;
+
+  // Late night
+  const lateNight = settled.filter(b=>{const h=new Date(b.date).getHours();return h>=23||h<5});
+  // Weekend
+  const weekend = settled.filter(b=>{const d=new Date(b.date).getDay();return d===0||d===6});
+  // Parlays
+  const parlays = settled.filter(b=>/parlay/i.test(b.betType));
+  // Favs
+  const favs = settled.filter(b=>{const o=Number(b.odds);return !isNaN(o)&&o<0});
+
+  // Biggest win and loss
+  const sortedByProfit = [...settled].sort((a,b)=>b.profit-a.profit);
+  const biggestWin = sortedByProfit[0];
+  const biggestLoss = sortedByProfit[sortedByProfit.length-1];
+
+  // Most bet sport
+  const topSport = sports[0] ? sports.sort((a,b)=>b.n-a.n)[0] : null;
+  // Best & worst sport
+  const sportsValid = sports.filter(s=>s.n>=3);
+  const bestSport = [...sportsValid].sort((a,b)=>b.profit-a.profit)[0];
+  const worstSport = [...sportsValid].sort((a,b)=>a.profit-b.profit)[0];
+
+  // Tilt episodes
+  const tiltDays = tilts.filter(t=>t.score>60);
+  const worstTilt = [...tilts].sort((a,b)=>b.score-a.score)[0];
+
+  // Longest streaks
+  const streaks = calcStreaks(settled);
+
+  // Latest hour bet
+  const latestBet = [...settled].sort((a,b)=>{
+    const ha = new Date(a.date).getHours();
+    const hb = new Date(b.date).getHours();
+    // Want late-night max
+    const sa = ha < 5 ? ha + 24 : ha;
+    const sb = hb < 5 ? hb + 24 : hb;
+    return sb - sa;
+  })[0];
+
+  // Stake stats
+  const stakes = settled.map(b=>b.stake);
+  const maxStake = Math.max(...stakes);
+  const avgStake = mean(stakes);
+
+  // Days active
+  const uniqueDays = new Set(settled.map(b=>b.date.slice(0,10))).size;
+
+  return {
+    totalBets: settled.length,
+    totalWagered: k.totalWagered,
+    profit: k.profit,
+    roi: k.roi,
+    winRate: k.winRate,
+    wins: k.wins,
+    losses: k.losses,
+    avgStake, maxStake,
+    hoursSpent,
+    uniqueDays,
+    chaseRatio: (c.avgStakeAfterWin>0)?c.avgStakeAfterLoss/c.avgStakeAfterWin:1,
+    afterLossStake: c.avgStakeAfterLoss,
+    afterWinStake: c.avgStakeAfterWin,
+    lateNight: lateNight.length,
+    lateNightPct: (lateNight.length/settled.length*100),
+    latestBet,
+    weekend: weekend.length,
+    weekendPct: weekend.length/settled.length,
+    parlays: parlays.length,
+    parlayPct: parlays.length/settled.length,
+    favPct: favs.length/settled.length,
+    biggestWin, biggestLoss,
+    topSport, bestSport, worstSport,
+    sportCount: sports.length,
+    topSportPct: topSport ? topSport.n/settled.length : 0,
+    tiltDays: tiltDays.length,
+    worstTilt,
+    streaks,
+    discipline: d.score,
+    persona: null,
+    clv: k.clv,
+    hasCLV: k.hasCLV
+  };
+}
+
+function filterByPeriod(bets, period){
+  if(period==='all') return bets;
+  const now = Date.now();
+  let cutoff;
+  if(period==='week') cutoff = now - 7*86400000;
+  else if(period==='month') cutoff = now - 30*86400000;
+  else if(period==='year') cutoff = now - 365*86400000;
+  return bets.filter(b=>new Date(b.date).getTime() >= cutoff);
+}
+
+function buildWrappedCards(period){
+  const filtered = filterByPeriod(state.bets, period);
+  if(filtered.length<3) return [{type:'empty', period}];
+  const s = buildWrappedStats(filtered);
+  if(!s) return [{type:'empty', period}];
+  s.persona = assignPersonality(s);
+  s.period = period;
+
+  const periodLabel = {week:'this week', month:'this month', year:'this year', all:'all-time'}[period];
+  const cards = [];
+
+  // 1. Intro
+  cards.push({type:'intro', bg:1, period, periodLabel});
+
+  // 2. Volume
+  cards.push({type:'volume', bg:2, stats:s, periodLabel});
+
+  // 3. Time spent / activity
+  cards.push({type:'time', bg:3, stats:s, periodLabel});
+
+  // 4. Latest bet (creepy callout)
+  if(s.latestBet){
+    const h = new Date(s.latestBet.date).getHours();
+    if(h>=22 || h<5) cards.push({type:'latebet', bg:6, stats:s});
+  }
+
+  // 5. Top sport
+  if(s.topSport) cards.push({type:'topsport', bg:4, stats:s});
+
+  // 6. Biggest win
+  if(s.biggestWin && s.biggestWin.profit>0) cards.push({type:'bigwin', bg:5, stats:s, confetti:true});
+
+  // 7. Biggest loss
+  if(s.biggestLoss && s.biggestLoss.profit<0) cards.push({type:'bigloss', bg:10, stats:s});
+
+  // 8. Tilt moment
+  if(s.tiltDays>0 && s.worstTilt) cards.push({type:'tilt', bg:8, stats:s});
+
+  // 9. Chasing
+  if(s.chaseRatio>1.15 || s.chaseRatio<0.85) cards.push({type:'chasing', bg:7, stats:s});
+
+  // 10. Money leak
+  if(s.worstSport && s.worstSport.profit<-10) cards.push({type:'leak', bg:10, stats:s});
+
+  // 11. Hidden edge
+  if(s.bestSport && s.bestSport.profit>10) cards.push({type:'edge', bg:4, stats:s});
+
+  // 12. Personality reveal
+  cards.push({type:'persona', bg:11, stats:s});
+
+  // 13. The Bottom Line
+  cards.push({type:'bottomline', bg:s.profit>=0?4:10, stats:s, confetti:s.profit>=0});
+
+  // 14. Share card
+  cards.push({type:'share', bg:12, stats:s, periodLabel});
+
+  return cards;
+}
+
+function openWrapped(){
+  // Period picker first
+  showPeriodPicker();
+}
+
+function showPeriodPicker(){
+  $('wrappedOverlay').classList.add('active');
+  $('wpProgress').innerHTML = '';
+  $('wpStage').innerHTML = `
+    <div class="wp-card active wp-bg-1" style="background:radial-gradient(ellipse at top,#1a1a2e,#000)">
+      <div class="wp-eyebrow">TILT WRAPPED</div>
+      <div class="wp-headline" style="background:linear-gradient(135deg,#ff6e40,#ff5252,#e040fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Your Story</div>
+      <div class="wp-sub">Pick a period and we'll roast your bets.</div>
+      <div class="wp-period-buttons">
+        <button class="wp-period-btn" onclick="startWrapped('week')">📅 Last Week</button>
+        <button class="wp-period-btn" onclick="startWrapped('month')">📆 Last 30 Days</button>
+        <button class="wp-period-btn" onclick="startWrapped('year')">🗓 Last Year</button>
+        <button class="wp-period-btn" onclick="startWrapped('all')">∞ All Time</button>
+      </div>
+    </div>
+  `;
+}
+
+function startWrapped(period){
+  wrappedState.period = period;
+  wrappedState.cards = buildWrappedCards(period);
+  wrappedState.idx = 0;
+  // Build progress bars
+  $('wpProgress').innerHTML = wrappedState.cards.map((_,i)=>`<div class="wp-bar" data-i="${i}"><div class="wp-bar-fill"></div></div>`).join('');
+  showCard(0);
+}
+
+function showCard(idx){
+  if(idx<0 || idx>=wrappedState.cards.length) return;
+  if(wrappedState.timer) clearTimeout(wrappedState.timer);
+  wrappedState.idx = idx;
+  const card = wrappedState.cards[idx];
+  $('wpStage').innerHTML = renderCard(card);
+
+  // Progress bars
+  document.querySelectorAll('.wp-bar').forEach((bar,i)=>{
+    bar.classList.remove('done','active');
+    if(i<idx) bar.classList.add('done');
+    else if(i===idx) bar.classList.add('active');
+    bar.style.setProperty('--dur', (card.dur||6)+'s');
+  });
+
+  // Animations: count up
+  setTimeout(()=>{
+    document.querySelectorAll('[data-count]').forEach(el=>{
+      const target = parseFloat(el.dataset.count);
+      const decimals = parseInt(el.dataset.decimals||'0');
+      const prefix = el.dataset.prefix||'';
+      const suffix = el.dataset.suffix||'';
+      animateCount(el, 0, target, 1500, decimals, prefix, suffix);
+    });
+  }, 50);
+
+  if(card.confetti) launchConfetti();
+
+  // Auto advance
+  const dur = (card.dur||6)*1000;
+  wrappedState.timer = setTimeout(()=>wpNext(), dur);
+}
+
+function animateCount(el, from, to, duration, decimals, prefix, suffix){
+  const start = performance.now();
+  function step(now){
+    const t = Math.min((now-start)/duration, 1);
+    const eased = 1 - Math.pow(1-t, 3);
+    const val = from + (to-from)*eased;
+    const numStr = decimals
+      ? val.toFixed(decimals)
+      : Math.round(val).toLocaleString();
+    el.textContent = (prefix||'') + numStr + (suffix||'');
+    if(t<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function renderCard(card){
+  const s = card.stats || {};
+  const periodLabel = card.periodLabel || '';
+  switch(card.type){
+    case 'empty':
+      return `<div class="wp-card active wp-bg-1">
+        <div class="wp-eyebrow">NOT ENOUGH DATA</div>
+        <div class="wp-headline">No bets yet.</div>
+        <div class="wp-sub">Import some bet history or load sample data, then come back for your story.</div>
+        <button class="wp-share-btn" style="margin-top:30px" onclick="closeWrapped()">Got it</button>
+      </div>`;
+
+    case 'intro':
+      return `<div class="wp-card active wp-bg-1">
+        <div class="wp-eyebrow">TILT WRAPPED · ${periodLabel.toUpperCase()}</div>
+        <div class="wp-headline" style="background:linear-gradient(135deg,#ff6e40,#ff5252,#e040fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Let's see how you did.</div>
+        <div class="wp-sub">A look at your bets, your habits, and your inner gambler.</div>
+        <div class="wp-tag">TAP TO BEGIN →</div>
+      </div>`;
+
+    case 'volume':
+      return `<div class="wp-card active wp-bg-2">
+        <div class="wp-eyebrow">YOU PLACED</div>
+        <div class="wp-mega"><span data-count="${s.totalBets}">0</span></div>
+        <div class="wp-headline" style="font-size:clamp(28px,5vw,48px)">bets ${periodLabel}</div>
+        <div class="wp-sub">Across ${s.uniqueDays} active days. That's ${(s.totalBets/Math.max(s.uniqueDays,1)).toFixed(1)} per day.</div>
+        <div class="wp-tag">TOTAL WAGERED · ${fmt$(s.totalWagered)}</div>
+      </div>`;
+
+    case 'time':
+      const hrs = Math.round(s.hoursSpent);
+      return `<div class="wp-card active wp-bg-3">
+        <div class="wp-eyebrow">TIME SPENT IN THE APP</div>
+        <div class="wp-mega"><span data-count="${hrs}">0</span><span style="font-size:.4em;opacity:.7">h</span></div>
+        <div class="wp-sub">That's roughly ${hrs} hours of staring at lines, refreshing scores, and rethinking your picks ${periodLabel}.</div>
+        <div class="wp-tag">${(hrs/7).toFixed(1)} HOURS PER DAY ON AVG</div>
+      </div>`;
+
+    case 'latebet':
+      const lb = s.latestBet;
+      const lbDate = new Date(lb.date);
+      const lbTime = lbDate.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+      const lbDay = lbDate.toLocaleDateString('en-US',{weekday:'long'});
+      return `<div class="wp-card active wp-bg-6">
+        <div class="wp-eyebrow">YOUR LATEST BET WAS AT</div>
+        <div class="wp-mega" style="font-size:clamp(60px,14vw,180px)">${lbTime}</div>
+        <div class="wp-headline" style="font-size:clamp(24px,4vw,42px)">on a ${lbDay}.</div>
+        <div class="wp-sub">${s.lateNight} of your bets were placed after 11pm. That's ${s.lateNightPct.toFixed(0)}% of all action. Books love you.</div>
+      </div>`;
+
+    case 'topsport':
+      return `<div class="wp-card active wp-bg-4">
+        <div class="wp-eyebrow">YOUR TOP SPORT</div>
+        <div class="wp-mega" style="font-size:clamp(80px,15vw,200px)">${s.topSport.key}</div>
+        <div class="wp-sub">${s.topSport.n} bets · ${fmt$(s.topSport.wagered)} wagered · ${fmtPct(s.topSport.roi)} ROI</div>
+        <div class="wp-tag">${(s.topSportPct*100).toFixed(0)}% OF ALL YOUR ACTION</div>
+      </div>`;
+
+    case 'bigwin':
+      const bw = s.biggestWin;
+      const bwOdds = bw.odds!=null ? (Number(bw.odds)>0?'+'+bw.odds:''+bw.odds) : '—';
+      return `<div class="wp-card active wp-bg-5">
+        <div class="wp-eyebrow">YOUR BIGGEST WIN</div>
+        <div class="wp-mega" data-count="${bw.profit}" data-prefix="+$" data-decimals="0">+$0</div>
+        <div class="wp-headline" style="font-size:clamp(24px,3.5vw,38px)">${bw.description||bw.sport}</div>
+        <div class="wp-bet-detail">
+          <div class="wpd-row"><span>Sport</span><span>${bw.sport}</span></div>
+          <div class="wpd-row"><span>Type</span><span>${bw.betType}</span></div>
+          <div class="wpd-row"><span>Stake</span><span>${fmt$(bw.stake)}</span></div>
+          <div class="wpd-row"><span>Odds</span><span>${bwOdds}</span></div>
+          <div class="wpd-row"><span>Date</span><span>${new Date(bw.date).toLocaleDateString()}</span></div>
+        </div>
+      </div>`;
+
+    case 'bigloss':
+      const bl = s.biggestLoss;
+      const blOdds = bl.odds!=null ? (Number(bl.odds)>0?'+'+bl.odds:''+bl.odds) : '—';
+      return `<div class="wp-card active wp-bg-10">
+        <div class="wp-eyebrow">YOUR BIGGEST L</div>
+        <div class="wp-mega" style="color:#ffb3b3">-$<span data-count="${Math.abs(bl.profit)}">0</span></div>
+        <div class="wp-headline" style="font-size:clamp(22px,3vw,34px)">${bl.description||bl.sport}</div>
+        <div class="wp-sub" style="margin-top:8px;opacity:.9">we don't have to talk about it.</div>
+        <div class="wp-bet-detail">
+          <div class="wpd-row"><span>Sport</span><span>${bl.sport}</span></div>
+          <div class="wpd-row"><span>Type</span><span>${bl.betType}</span></div>
+          <div class="wpd-row"><span>Stake</span><span>${fmt$(bl.stake)}</span></div>
+          <div class="wpd-row"><span>Odds</span><span>${blOdds}</span></div>
+        </div>
+      </div>`;
+
+    case 'tilt':
+      const wt = s.worstTilt;
+      return `<div class="wp-card active wp-bg-8">
+        <div class="wp-eyebrow">PEAK TILT MOMENT</div>
+        <div class="wp-headline">${new Date(wt.date).toLocaleDateString('en-US',{weekday:'long'})}<br/>night.</div>
+        <div class="wp-sub" style="margin-top:14px">You placed <b>${wt.count} bets</b> in one day. ${wt.lateNight} were after 11pm. ${wt.revenge} were within 30 min of a loss.</div>
+        <div class="wp-stat-grid">
+          <div class="wp-stat-cell"><div class="wsc-label">Tilt Score</div><div class="wsc-value">${wt.score.toFixed(0)}<span style="font-size:.4em;opacity:.6">/100</span></div></div>
+          <div class="wp-stat-cell"><div class="wsc-label">Wagered</div><div class="wsc-value">${fmt$(wt.totalStake)}</div></div>
+        </div>
+      </div>`;
+
+    case 'chasing':
+      const isChasing = s.chaseRatio > 1.15;
+      return `<div class="wp-card active wp-bg-7">
+        <div class="wp-eyebrow">${isChasing?'YOU CHASE LOSSES':'YOU STAY DISCIPLINED'}</div>
+        <div class="wp-mega">${s.chaseRatio.toFixed(2)}x</div>
+        <div class="wp-sub">Your average stake after a loss is <b>${s.chaseRatio.toFixed(2)}x</b> what you bet after a win.<br/>${isChasing?'That\'s textbook revenge betting.':'Most bettors can\'t do this.'}</div>
+        <div class="wp-stat-grid">
+          <div class="wp-stat-cell"><div class="wsc-label">After Loss</div><div class="wsc-value">${fmt$(s.afterLossStake)}</div></div>
+          <div class="wp-stat-cell"><div class="wsc-label">After Win</div><div class="wsc-value">${fmt$(s.afterWinStake)}</div></div>
+        </div>
+      </div>`;
+
+    case 'leak':
+      return `<div class="wp-card active wp-bg-10">
+        <div class="wp-eyebrow">YOUR BIGGEST MONEY LEAK</div>
+        <div class="wp-mega" style="font-size:clamp(70px,14vw,180px)">${s.worstSport.key}</div>
+        <div class="wp-sub">You donated <b>${fmt$(-s.worstSport.profit)}</b> to the sportsbooks via ${s.worstSport.key}. ${s.worstSport.n} bets at ${fmtPct(s.worstSport.roi)} ROI.</div>
+        <div class="wp-tag">CONSIDER CUTTING THIS SPORT</div>
+      </div>`;
+
+    case 'edge':
+      return `<div class="wp-card active wp-bg-4">
+        <div class="wp-eyebrow">YOUR HIDDEN EDGE</div>
+        <div class="wp-mega" style="font-size:clamp(70px,14vw,180px)">${s.bestSport.key}</div>
+        <div class="wp-sub">You're up <b>${fmt$(s.bestSport.profit)}</b> on ${s.bestSport.key} at <b>${fmtPct(s.bestSport.roi)}</b> ROI. This is your edge — protect it.</div>
+        <div class="wp-tag">${s.bestSport.wins}-${s.bestSport.losses} RECORD</div>
+      </div>`;
+
+    case 'persona':
+      const p = s.persona;
+      return `<div class="wp-card active wp-bg-11">
+        <div class="wp-eyebrow">YOUR BETTOR ARCHETYPE</div>
+        <div class="wp-persona">
+          <div class="wp-persona-emoji">${p.emoji}</div>
+          <div class="wp-persona-title">${p.name}</div>
+        </div>
+        <div class="wp-sub" style="margin-top:24px;font-style:italic">"${p.tagline}"</div>
+      </div>`;
+
+    case 'bottomline':
+      const isUp = s.profit>=0;
+      return `<div class="wp-card active wp-bg-${isUp?4:10}">
+        <div class="wp-eyebrow">THE BOTTOM LINE</div>
+        <div class="wp-mega" data-count="${Math.abs(s.profit)}" data-prefix="${isUp?'+$':'-$'}" data-decimals="0" style="color:${isUp?'#fff':'#ffb3b3'}">${isUp?'+$':'-$'}0</div>
+        <div class="wp-sub">${isUp ? `You finished ${periodLabel} in the green. Most bettors don't.` : `You finished ${periodLabel} down. The good news? You can fix it.`}</div>
+        <div class="wp-stat-grid">
+          <div class="wp-stat-cell"><div class="wsc-label">ROI</div><div class="wsc-value">${fmtPct(s.roi)}</div></div>
+          <div class="wp-stat-cell"><div class="wsc-label">Win Rate</div><div class="wsc-value">${s.winRate.toFixed(1)}%</div></div>
+          <div class="wp-stat-cell"><div class="wsc-label">Discipline</div><div class="wsc-value">${s.discipline.toFixed(0)}<span style="font-size:.4em;opacity:.6">/100</span></div></div>
+          <div class="wp-stat-cell"><div class="wsc-label">${s.streaks.current.type==='win'?'Win Streak':s.streaks.current.type==='loss'?'Loss Streak':'Streak'}</div><div class="wsc-value">${s.streaks.current.n}</div></div>
+        </div>
+      </div>`;
+
+    case 'share':
+      const isUpFinal = s.profit>=0;
+      return `<div class="wp-card active wp-bg-12">
+        <div class="wp-eyebrow">YOUR ${periodLabel.toUpperCase()}, IN ONE CARD</div>
+        <div class="wp-share" id="shareCard">
+          <h3>TILT WRAPPED · ${periodLabel.toUpperCase()}</h3>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:900;margin-bottom:6px">${s.persona.emoji} ${s.persona.name}</div>
+          <div style="font-size:11px;opacity:.7;font-style:italic;margin-bottom:24px">"${s.persona.tagline}"</div>
+          <div class="wp-share-grid">
+            <div class="wp-share-item"><div class="wpsi-label">Bets</div><div class="wpsi-value">${s.totalBets}</div></div>
+            <div class="wp-share-item"><div class="wpsi-label">Profit</div><div class="wpsi-value" style="color:${isUpFinal?'#00e676':'#ff5252'}">${isUpFinal?'+':''}${fmt$(s.profit)}</div></div>
+            <div class="wp-share-item"><div class="wpsi-label">ROI</div><div class="wpsi-value" style="color:${s.roi>=0?'#00e676':'#ff5252'}">${fmtPct(s.roi)}</div></div>
+            <div class="wp-share-item"><div class="wpsi-label">Discipline</div><div class="wpsi-value">${s.discipline.toFixed(0)}/100</div></div>
+            <div class="wp-share-item"><div class="wpsi-label">Top Sport</div><div class="wpsi-value" style="font-size:18px">${s.topSport?s.topSport.key:'—'}</div></div>
+            <div class="wp-share-item"><div class="wpsi-label">Win Rate</div><div class="wpsi-value">${s.winRate.toFixed(0)}%</div></div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;opacity:.4;letter-spacing:1px">TILT.BETTOR INTELLIGENCE</div>
+        </div>
+        <div class="wp-share-btns">
+          <button class="wp-share-btn" onclick="downloadShareCard()">📷 Save Image</button>
+          <button class="wp-share-btn outline" onclick="closeWrapped()">Done</button>
+        </div>
+      </div>`;
+  }
+  return '';
+}
+
+function wpNext(){
+  if(wrappedState.idx < wrappedState.cards.length-1) showCard(wrappedState.idx+1);
+  else if(wrappedState.timer) clearTimeout(wrappedState.timer);
+}
+function wpPrev(){ if(wrappedState.idx>0) showCard(wrappedState.idx-1); }
+function closeWrapped(){
+  if(wrappedState.timer) clearTimeout(wrappedState.timer);
+  $('wrappedOverlay').classList.remove('active');
+}
+
+/* ============================================================
+   CONFETTI
+   ============================================================ */
+function launchConfetti(){
+  const colors = ['#ff6e40','#00e676','#40c4ff','#ffab00','#e040fb','#fff'];
+  const stage = $('wpStage');
+  for(let i=0;i<60;i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random()*100+'%';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDuration = (2.5+Math.random()*2)+'s';
+    c.style.animationDelay = (Math.random()*0.5)+'s';
+    c.style.transform = `rotate(${Math.random()*360}deg)`;
+    stage.appendChild(c);
+    setTimeout(()=>c.remove(), 5000);
+  }
+}
+
+/* ============================================================
+   SHARE CARD DOWNLOAD (canvas)
+   ============================================================ */
+function downloadShareCard(){
+  const s = buildWrappedStats(filterByPeriod(state.bets, wrappedState.period));
+  if(!s){ toast('No data','error'); return; }
+  s.persona = assignPersonality(s);
+  const periodLabel = {week:'Last Week',month:'Last 30 Days',year:'Last Year',all:'All Time'}[wrappedState.period];
+  const W=1080, H=1350;
+  const cnv = document.createElement('canvas');
+  cnv.width=W; cnv.height=H;
+  const ctx = cnv.getContext('2d');
+  // gradient bg
+  const g = ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'#ff6e40');
+  g.addColorStop(0.5,'#ff5252');
+  g.addColorStop(1,'#e040fb');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // dark overlay
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0,0,W,H);
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#fff';
+  // header
+  ctx.font='bold 28px monospace';
+  ctx.fillText('TILT WRAPPED · '+periodLabel.toUpperCase(), W/2, 100);
+
+  // emoji + persona
+  ctx.font='180px sans-serif';
+  ctx.fillText(s.persona.emoji, W/2, 320);
+  ctx.font='bold 64px sans-serif';
+  ctx.fillText(s.persona.name, W/2, 410);
+  ctx.font='italic 26px sans-serif';
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  wrapText(ctx, '"'+s.persona.tagline+'"', W/2, 460, W-200, 36);
+
+  // Stat grid
+  const stats = [
+    ['BETS', String(s.totalBets)],
+    ['PROFIT', (s.profit>=0?'+':'')+fmt$(s.profit)],
+    ['ROI', fmtPct(s.roi)],
+    ['WIN RATE', s.winRate.toFixed(0)+'%'],
+    ['DISCIPLINE', s.discipline.toFixed(0)+'/100'],
+    ['TOP SPORT', s.topSport ? s.topSport.key : '—'],
+  ];
+  const cols = 2;
+  const cellW = (W-200)/cols, cellH = 150;
+  stats.forEach((stat,i)=>{
+    const c = i%cols, r = Math.floor(i/cols);
+    const x = 100 + c*cellW, y = 620 + r*cellH;
+    // box
+    ctx.fillStyle='rgba(0,0,0,.35)';
+    roundRect(ctx, x+10, y, cellW-20, cellH-20, 20, true);
+    ctx.fillStyle='rgba(255,255,255,.6)';
+    ctx.font='bold 20px monospace';
+    ctx.textAlign='left';
+    ctx.fillText(stat[0], x+40, y+45);
+    ctx.fillStyle='#fff';
+    ctx.font='bold 56px sans-serif';
+    ctx.fillText(stat[1], x+40, y+105);
+  });
+
+  // footer
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,.5)';
+  ctx.font='bold 22px monospace';
+  ctx.fillText('TILT.BETTOR INTELLIGENCE', W/2, H-60);
+
+  // download
+  cnv.toBlob(blob=>{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `tilt_wrapped_${wrappedState.period}.png`; a.click();
+    URL.revokeObjectURL(url);
+    toast('Saved!');
+  });
+}
+
+function roundRect(ctx,x,y,w,h,r,fill){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+  if(fill) ctx.fill();
+}
+function wrapText(ctx,text,x,y,maxW,lh){
+  const words = text.split(' '); let line='', yy=y;
+  for(const w of words){
+    const test = line + w + ' ';
+    if(ctx.measureText(test).width > maxW){
+      ctx.fillText(line,x,yy); line = w+' '; yy += lh;
+    } else line = test;
+  }
+  ctx.fillText(line,x,yy);
+}
+
+/* ============================================================
+   TAB SWITCHING
+   ============================================================ */
+let currentTab = 'dash';
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.nav-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.tab===tab);
+  });
+  // Show/hide
+  $('dashboard').classList.toggle('active', tab==='dash');
+  $('tabBets').classList.toggle('active', tab==='bets');
+  $('tabInsights').classList.toggle('active', tab==='insights');
+  $('tabPatterns').classList.toggle('active', tab==='patterns');
+  // Empty state always off when switching tabs (if data exists)
+  if(state.bets.length) $('emptyState').style.display='none';
+
+  // Render tab content on switch
+  if(tab==='bets') renderFullBetsTab();
+  if(tab==='insights') renderInsightsTab();
+  if(tab==='patterns') renderPatternsTab();
+  window.scrollTo(0, 0);
+}
+
+/* ============================================================
+   BET LOG TAB — Full searchable/filterable/paginated
+   ============================================================ */
+let betLogState = { page:0, perPage:50 };
+
+function getFilteredBets(){
+  let bets = [...state.bets];
+  const search = ($('betSearch')?.value||'').toLowerCase();
+  const sport = $('betFilterSport')?.value||'';
+  const type = $('betFilterType')?.value||'';
+  const result = $('betFilterResult')?.value||'';
+  const book = $('betFilterBook')?.value||'';
+
+  if(search) bets = bets.filter(b=>(b.description||'').toLowerCase().includes(search)||(b.sport||'').toLowerCase().includes(search));
+  if(sport) bets = bets.filter(b=>b.sport===sport);
+  if(type) bets = bets.filter(b=>b.betType===type);
+  if(result) bets = bets.filter(b=>b.result===result);
+  if(book) bets = bets.filter(b=>b.book===book);
+
+  const sort = $('betSort')?.value||'date-desc';
+  if(sort==='date-desc') bets.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  else if(sort==='date-asc') bets.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  else if(sort==='profit-desc') bets.sort((a,b)=>b.profit-a.profit);
+  else if(sort==='profit-asc') bets.sort((a,b)=>a.profit-b.profit);
+  else if(sort==='stake-desc') bets.sort((a,b)=>b.stake-a.stake);
+  return bets;
+}
+
+function renderFullBetsTab(){
+  // Populate filter dropdowns
+  const sports = [...new Set(state.bets.map(b=>b.sport))].sort();
+  const types = [...new Set(state.bets.map(b=>b.betType))].sort();
+  const books = [...new Set(state.bets.map(b=>b.book).filter(Boolean))].sort();
+  $('betFilterSport').innerHTML = '<option value="">All Sports</option>'+sports.map(s=>`<option value="${s}">${s}</option>`).join('');
+  $('betFilterType').innerHTML = '<option value="">All Types</option>'+types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  $('betFilterBook').innerHTML = '<option value="">All Books</option>'+books.map(b=>`<option value="${b}">${b}</option>`).join('');
+
+  renderBetLogPage();
+
+  // Wire up filter changes
+  ['betSearch','betFilterSport','betFilterType','betFilterResult','betFilterBook','betSort'].forEach(id=>{
+    const el = $(id);
+    if(el) el.oninput = el.onchange = ()=>{ betLogState.page=0; renderBetLogPage(); };
+  });
+}
+
+function renderBetLogPage(){
+  const bets = getFilteredBets();
+  const {page, perPage} = betLogState;
+  const totalPages = Math.ceil(bets.length/perPage);
+  const slice = bets.slice(page*perPage, (page+1)*perPage);
+
+  // Summary stats for filtered bets
+  const settled = bets.filter(b=>b.result!=='pending');
+  const totalProfit = settled.reduce((s,b)=>s+b.profit,0);
+  const totalWager = settled.reduce((s,b)=>s+b.stake,0);
+  $('betCount').innerHTML = `${bets.length} bets · ${fmt$(totalWager)} wagered · <span class="${totalProfit>=0?'t-pos':'t-neg'}">${fmt$(totalProfit)}</span>`;
+
+  const html = `<thead><tr><th>Date</th><th>Sport</th><th>Type</th><th>Book</th><th>Selection</th><th class="t-num">Stake</th><th class="t-num">Odds</th><th>Result</th><th class="t-num">P/L</th></tr></thead><tbody>${
+    slice.map(b=>{
+      const d = new Date(b.date);
+      const dateStr = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+      const oddsStr = b.odds!=null ? (Number(b.odds)>0?'+'+b.odds:''+b.odds) : '—';
+      return `<tr>
+        <td class="t-mut" style="font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap">${dateStr}</td>
+        <td>${b.sport}</td>
+        <td class="t-mut">${b.betType}</td>
+        <td class="t-mut">${b.book||'—'}</td>
+        <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.description}</td>
+        <td class="t-num">${fmt$(b.stake)}</td>
+        <td class="t-num t-mut">${oddsStr}</td>
+        <td><span class="pill pill-${b.result==='win'?'w':b.result==='loss'?'l':'p'}">${b.result}</span></td>
+        <td class="t-num ${b.profit>=0?'t-pos':'t-neg'}"><b>${fmt$(b.profit)}</b></td>
+      </tr>`;
+    }).join('')
+  }</tbody>`;
+  $('fullBetsTable').innerHTML = html;
+
+  // Pagination
+  if(totalPages<=1){ $('betPagination').innerHTML=''; return; }
+  let pagHtml = '';
+  if(page>0) pagHtml += `<button class="page-btn" onclick="betLogState.page--;renderBetLogPage()">← Prev</button>`;
+  pagHtml += `<span class="page-info">Page ${page+1} of ${totalPages}</span>`;
+  if(page<totalPages-1) pagHtml += `<button class="page-btn" onclick="betLogState.page++;renderBetLogPage()">Next →</button>`;
+  $('betPagination').innerHTML = pagHtml;
+}
+
+/* ============================================================
+   INSIGHTS TAB
+   ============================================================ */
+function renderInsightsTab(){
+  // Full insights
+  const items = generateInsights(state.bets);
+  $('fullInsightsList').innerHTML = items.length ? items.map(i=>`
+    <div class="insight ${i.sev}">
+      <div class="insight-icon">${i.icon}</div>
+      <div class="insight-body">
+        <div class="insight-title">${i.title}</div>
+        <div class="insight-desc">${i.desc}</div>
+        <div class="insight-impact">${i.impact}</div>
+      </div>
+    </div>
+  `).join('') : '<div style="color:var(--sub);text-align:center;padding:20px">No insights to show.</div>';
+
+  // Discipline breakdown
+  const d = calcDiscipline(state.bets);
+  $('insDiscBreakdown').innerHTML = Object.entries(d.parts||{}).map(([k,v])=>{
+    let c = '#ff5252';
+    if(v>=70) c='#00e676'; else if(v>=50) c='#ffab00'; else if(v>=30) c='#ff8a65';
+    let desc = '';
+    if(k==='Stake Consistency') desc = 'How uniform your bet sizes are (lower variance = better)';
+    else if(k==='No Chasing') desc = 'Whether you increase stakes after losses';
+    else if(k==='Bankroll Mgmt') desc = 'Percentage of bets under 5% of bankroll';
+    else if(k==='Time Discipline') desc = 'Avoiding late-night bets (after 11pm)';
+    else if(k==='Focus') desc = 'Concentration on specific bet types vs scattered';
+    else if(k==='CLV') desc = 'Percentage of bets with positive closing line value';
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text)">${k}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${c};font-weight:700">${v.toFixed(0)}/100</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${v}%;background:${c};border-radius:4px;transition:width .4s"></div>
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-top:3px">${desc}</div>
+    </div>`;
+  }).join('');
+
+  // Chasing deep dive
+  const ch = calcChasing(state.bets);
+  const ratio = ch.avgStakeAfterWin>0 ? ch.avgStakeAfterLoss/ch.avgStakeAfterWin : 1;
+  $('insChasingDeep').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase">AVG STAKE AFTER LOSS</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;margin-top:6px;color:${ratio>1.3?'var(--red)':'var(--text)'}">${fmt$(ch.avgStakeAfterLoss)}</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:4px">${ch.nLoss} bets · ${ch.wrAfterLoss.toFixed(1)}% win rate</div>
+      </div>
+      <div style="background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase">AVG STAKE AFTER WIN</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;margin-top:6px">${fmt$(ch.avgStakeAfterWin)}</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:4px">${ch.nWin} bets · ${ch.wrAfterWin.toFixed(1)}% win rate</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:800;color:${ratio>1.3?'var(--red)':ratio<0.85?'var(--green)':'var(--text)'}">${ratio.toFixed(2)}x</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1px">CHASE RATIO (1.0 = NEUTRAL)</div>
+    </div>
+    <div style="font-size:12px;color:var(--sub);line-height:1.6;padding:10px 12px;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+      ${ratio>1.3?'<b style="color:var(--red)">High chasing detected.</b> Your stakes increase significantly after losses. This is the most common way bettors destroy their bankrolls. Consider implementing a flat-stake strategy or rules-based sizing.'
+      :ratio>1.1?'<b style="color:var(--amber)">Mild chasing tendency.</b> There\'s a slight increase in stakes after losses. Monitor this — it can escalate during losing streaks.'
+      :ratio<0.85?'<b style="color:var(--green)">Anti-chasing behavior.</b> You actually bet less after losses, which is disciplined and uncommon. This protects your bankroll during downswings.'
+      :'<b style="color:var(--text)">Neutral sizing.</b> Your stakes don\'t change meaningfully based on previous results. This is solid, disciplined behavior.'}
+    </div>
+  `;
+
+  // CLV panel
+  const settled = state.bets.filter(b=>b.result!=='pending');
+  const clvBets = settled.filter(b=>b.odds!=null && b.closingOdds!=null);
+  if(clvBets.length < 5){
+    $('insCLVPanel').innerHTML = '<div style="color:var(--sub);text-align:center;padding:20px">Not enough closing line data. Include a <code>closing_odds</code> column in your CSV for CLV analysis.</div>';
+  } else {
+    const clvs = clvBets.map(b=>{
+      const t = parseOdds(b.odds), c = parseOdds(b.closingOdds);
+      return (t&&c) ? (t-c)/c*100 : 0;
+    });
+    const posCLV = clvs.filter(v=>v>0).length;
+    const avgCLV = mean(clvs);
+    $('insCLVPanel').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+        <div style="background:var(--bg2);padding:14px;border-radius:8px;border:1px solid var(--border);text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">AVG CLV</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:${avgCLV>=0?'var(--green)':'var(--red)'}">${fmtPct(avgCLV,2)}</div>
+        </div>
+        <div style="background:var(--bg2);padding:14px;border-radius:8px;border:1px solid var(--border);text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">+CLV RATE</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:${posCLV/clvs.length>0.5?'var(--green)':'var(--red)'}">${(posCLV/clvs.length*100).toFixed(0)}%</div>
+        </div>
+        <div style="background:var(--bg2);padding:14px;border-radius:8px;border:1px solid var(--border);text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">SAMPLE</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700">${clvBets.length}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.6;padding:10px 12px;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+        <b>CLV (Closing Line Value)</b> measures whether you got better odds than the market's final price. Positive CLV is the single strongest predictor of long-term profitability — even if you're losing short-term, positive CLV means the math is on your side.
+      </div>
+    `;
+  }
+}
+
+/* ============================================================
+   PATTERNS TAB
+   ============================================================ */
+function renderPatternsTab(){
+  renderDayHourHeatmap();
+  renderMonthlyPerf();
+  renderBookPerf();
+  renderStakeTimeline();
+  renderSportCumulative();
+  renderRollingWR();
+}
+
+function renderDayHourHeatmap(){
+  const settled = state.bets.filter(b=>b.result!=='pending');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  // Build grid: day x hour
+  const grid = days.map(()=>Array(24).fill(null).map(()=>({n:0,profit:0,wagered:0})));
+  settled.forEach(b=>{
+    const d = new Date(b.date);
+    grid[d.getDay()][d.getHours()].n++;
+    grid[d.getDay()][d.getHours()].profit += b.profit;
+    grid[d.getDay()][d.getHours()].wagered += b.stake;
+  });
+
+  let html = '<div class="pattern-heatmap">';
+  // Column labels
+  html += '<div></div>';
+  for(let h=0;h<24;h++) html += `<div class="ph-col-label">${h}</div>`;
+  // Rows
+  for(let d=0;d<7;d++){
+    html += `<div class="ph-label">${days[d]}</div>`;
+    for(let h=0;h<24;h++){
+      const cell = grid[d][h];
+      const roi = cell.wagered ? cell.profit/cell.wagered*100 : 0;
+      let bg = '#1a2535';
+      if(cell.n===0) bg = 'rgba(255,255,255,.02)';
+      else if(roi > 15) bg = 'rgba(0,230,118,.7)';
+      else if(roi > 5) bg = 'rgba(0,230,118,.4)';
+      else if(roi > 0) bg = 'rgba(0,230,118,.2)';
+      else if(roi > -5) bg = 'rgba(255,82,82,.2)';
+      else if(roi > -15) bg = 'rgba(255,82,82,.4)';
+      else if(cell.n>0) bg = 'rgba(255,82,82,.7)';
+      const tip = `${days[d]} ${h}:00 · ${cell.n} bets · ${fmtPct(roi)} ROI · ${fmt$(cell.profit)}`;
+      html += `<div class="ph-cell" style="background:${bg}" title="${tip}">${cell.n||''}</div>`;
+    }
+  }
+  html += '</div>';
+  html += '<div style="display:flex;gap:12px;margin-top:12px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--dim)">';
+  html += '<span>LOSS</span>';
+  ['rgba(255,82,82,.7)','rgba(255,82,82,.4)','rgba(255,82,82,.2)','rgba(255,255,255,.02)','rgba(0,230,118,.2)','rgba(0,230,118,.4)','rgba(0,230,118,.7)'].forEach(c=>
+    html+=`<div style="width:16px;height:10px;background:${c};border-radius:2px"></div>`
+  );
+  html += '<span>PROFIT</span></div>';
+  $('dayHourHeatmap').innerHTML = html;
+}
+
+function renderMonthlyPerf(){
+  const settled = state.bets.filter(b=>b.result!=='pending');
+  const months = {};
+  settled.forEach(b=>{
+    const m = b.date.slice(0,7);
+    if(!months[m]) months[m] = {wagered:0,profit:0,n:0};
+    months[m].n++; months[m].wagered+=b.stake; months[m].profit+=b.profit;
+  });
+  const sorted = Object.entries(months).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(!sorted.length){ $('monthlyPanel').innerHTML='<div style="color:var(--sub);text-align:center;padding:20px">No data</div>'; return; }
+
+  const maxAbs = Math.max(...sorted.map(([_,v])=>Math.abs(v.profit)), 1);
+  let html = '<div class="monthly-bars">';
+  for(const [month, v] of sorted){
+    const h = Math.max(Math.abs(v.profit)/maxAbs * 140, 4);
+    const c = v.profit>=0 ? 'var(--green)' : 'var(--red)';
+    const label = month.slice(5)+'/'+month.slice(2,4);
+    html += `<div class="monthly-bar" style="height:${h}px;background:${c}" title="${month}: ${v.n} bets, ${fmt$(v.profit)} (${fmtPct(v.wagered?v.profit/v.wagered*100:0)} ROI)"><div class="monthly-bar-label">${label}</div></div>`;
+  }
+  html += '</div>';
+  // Legend
+  html += `<div style="margin-top:28px;overflow-x:auto"><table><thead><tr><th>Month</th><th class="t-num">Bets</th><th class="t-num">Wagered</th><th class="t-num">Profit</th><th class="t-num">ROI</th></tr></thead><tbody>`;
+  for(const [month, v] of sorted.reverse()){
+    const roi = v.wagered?v.profit/v.wagered*100:0;
+    html += `<tr><td>${month}</td><td class="t-num t-mut">${v.n}</td><td class="t-num t-mut">${fmt$(v.wagered)}</td><td class="t-num ${v.profit>=0?'t-pos':'t-neg'}">${fmt$(v.profit)}</td><td class="t-num ${roi>=0?'t-pos':'t-neg'}">${fmtPct(roi)}</td></tr>`;
+  }
+  html += '</tbody></table></div>';
+  $('monthlyPanel').innerHTML = html;
+}
+
+function renderBookPerf(){
+  const data = calcGroupBy(state.bets, 'book').filter(b=>b.key&&b.key!=='');
+  if(!data.length){ $('bookPanel').innerHTML='<div style="color:var(--sub);text-align:center;padding:20px">No book data</div>'; return; }
+  const maxWagered = Math.max(...data.map(b=>b.wagered));
+  $('bookPanel').innerHTML = data.map(b=>{
+    const pct = b.wagered/maxWagered*100;
+    const roi = b.wagered?b.profit/b.wagered*100:0;
+    const c = b.profit>=0?'var(--green)':'var(--red)';
+    return `<div class="book-row">
+      <div class="book-name">${b.key}</div>
+      <div class="book-bar-wrap"><div class="book-bar-inner" style="width:${pct}%;background:${c}"></div></div>
+      <div class="book-stats">${b.n} bets · <span style="color:${c};font-weight:600">${fmt$(b.profit)} (${fmtPct(roi)})</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderStakeTimeline(){
+  const settled = state.bets.filter(b=>b.result!=='pending');
+  const data = settled.map(b=>({x:new Date(b.date), y:b.stake}));
+  // Rolling avg (20 bets)
+  const rolling = [];
+  for(let i=0;i<settled.length;i++){
+    const window = settled.slice(Math.max(0,i-19),i+1);
+    rolling.push({x:new Date(settled[i].date), y:mean(window.map(b=>b.stake))});
+  }
+  if(charts.stakeTime) try{charts.stakeTime.destroy()}catch(e){}
+  charts.stakeTime = new Chart($('stakeTimeChart'),{
+    type:'scatter',
+    data:{datasets:[
+      {label:'Stake',data:data,backgroundColor:'rgba(255,138,101,.3)',pointRadius:2,order:2},
+      {label:'20-bet Avg',data:rolling,type:'line',borderColor:'#ff8a65',borderWidth:2,pointRadius:0,tension:0.3,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8a9db3',font:{size:10}}}},
+      scales:{
+        x:{type:'time',time:{unit:'month'},grid:{display:false},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9}}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9},callback:v=>'$'+v}}
+      }
+    }
+  });
+}
+
+function renderSportCumulative(){
+  const settled = state.bets.filter(b=>b.result!=='pending');
+  const sports = [...new Set(settled.map(b=>b.sport))];
+  const colors = ['#00e676','#ff5252','#40c4ff','#ffab00','#ce93d8','#64ffda','#ff8a65'];
+  const datasets = sports.map((sport,i)=>{
+    let cum = 0;
+    const data = settled.filter(b=>b.sport===sport).map(b=>{cum+=b.profit;return{x:new Date(b.date),y:cum}});
+    return {label:sport, data, borderColor:colors[i%colors.length], borderWidth:2, pointRadius:0, tension:0.2, fill:false};
+  });
+  if(charts.sportCum) try{charts.sportCum.destroy()}catch(e){}
+  charts.sportCum = new Chart($('sportCumChart'),{
+    type:'line',
+    data:{datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8a9db3',font:{size:10}}}},
+      scales:{
+        x:{type:'time',time:{unit:'month'},grid:{display:false},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9}}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9},callback:v=>'$'+v}}
+      }
+    }
+  });
+}
+
+function renderRollingWR(){
+  const settled = state.bets.filter(b=>b.result!=='pending');
+  const window = 30;
+  const data = [];
+  for(let i=window-1;i<settled.length;i++){
+    const slice = settled.slice(i-window+1, i+1);
+    const wins = slice.filter(b=>b.result==='win').length;
+    data.push({x:new Date(settled[i].date), y:wins/window*100});
+  }
+  if(charts.rollingWR) try{charts.rollingWR.destroy()}catch(e){}
+  charts.rollingWR = new Chart($('rollingWRChart'),{
+    type:'line',
+    data:{datasets:[
+      {label:'Win Rate %',data, borderColor:'#40c4ff', borderWidth:2, pointRadius:0, tension:0.3, fill:{target:'origin',above:'rgba(64,196,255,.1)'}},
+      {label:'50% Line',data:data.length?[{x:data[0].x,y:50},{x:data[data.length-1].x,y:50}]:[], borderColor:'rgba(255,255,255,.15)', borderWidth:1, borderDash:[5,5], pointRadius:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8a9db3',font:{size:10}}}},
+      scales:{
+        x:{type:'time',time:{unit:'month'},grid:{display:false},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9}}},
+        y:{min:20,max:80,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d5068',font:{family:'JetBrains Mono',size:9},callback:v=>v+'%'}}
+      }
+    }
+  });
+}
+
+document.addEventListener('keydown',(e)=>{
+  if(!$('wrappedOverlay').classList.contains('active')) return;
+  if(e.key==='ArrowRight' || e.key===' ') wpNext();
+  else if(e.key==='ArrowLeft') wpPrev();
+  else if(e.key==='Escape') closeWrapped();
+});
+
+document.addEventListener('DOMContentLoaded',()=>{
+  load();
+  render();
+
+  // Nav tabs
+  document.querySelectorAll('.nav-tab').forEach(tab=>{
+    tab.onclick = ()=>{ if(state.bets.length) switchTab(tab.dataset.tab); };
+  });
+
+  $('loadSample').onclick = loadSampleData;
+  $('emptyLoadSample').onclick = loadSampleData;
+  $('openUpload').onclick = ()=>openModal('uploadModal');
+  $('emptyUpload').onclick = ()=>openModal('uploadModal');
+  $('clearData').onclick = clearAll;
+  $('openWrapped').onclick = openWrapped;
+
+  const zone = $('uploadZone');
+  const input = $('fileInput');
+  zone.onclick = ()=>input.click();
+  input.onchange = (e)=>{ if(e.target.files[0]) handleFile(e.target.files[0]); };
+  zone.ondragover = (e)=>{e.preventDefault();zone.classList.add('drag')};
+  zone.ondragleave = ()=>zone.classList.remove('drag');
+  zone.ondrop = (e)=>{
+    e.preventDefault();
+    zone.classList.remove('drag');
+    if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  };
+
+  // Click outside modal to close
+  document.querySelectorAll('.modal-bg').forEach(m=>{
+    m.onclick = (e)=>{if(e.target===m) m.classList.remove('active')};
+  });
+});
+</script>
+</body>
+</html>
